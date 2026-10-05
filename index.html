@@ -9,6 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>세종 대왕테니스 클럽</title>
 
+  <!-- 모바일 기종 무관하게 100% 동일하게 렌더링되는 전용 영문 필기체 구글 웹폰트 로드 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -188,7 +193,6 @@
       letter-spacing: -0.5px;
       white-space: nowrap;
     }
-
     .club-title-text {
       background: linear-gradient(
         110deg,
@@ -568,7 +572,6 @@
     .btn-danger { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
     .btn-secondary { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; }
     
-    /* 4분할 버튼을 위한 정밀 축소 스타일 */
     .btn-outline-mini-compact {
       background: #ffffff;
       border: 1px solid #cbd5e1;
@@ -676,15 +679,22 @@
     }
     .btn-kakao-share:active, .btn-primary-large:active { transform: scale(0.97); }
 
+    /* [사용자 요청 반영] 하단 크레딧: 사이즈 축소 및 전 기종 호환 필기체 웹폰트 적용, 완벽 중앙 정렬 */
     .footer-credit {
       width: 100%;
       max-width: 440px;
+      margin: 0 auto;
       text-align: center;
-      padding: 12px 0;
-      font-size: 19px;
-      color: rgba(255, 255, 255, 0.9);
-      font-family: "Brush Script MT", "Caveat", "Dancing Script", cursive;
-      letter-spacing: 0.8px;
+      padding: 8px 0 10px 0;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      font-family: 'Dancing Script', cursive, sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
     }
 
     .modal-backdrop {
@@ -946,6 +956,7 @@
     </main>
   </div>
 
+  <!-- 하단 크레딧: 모바일 기종 관계없이 유려하게 표시되는 필기체 웹폰트 적용, 사이즈 축소 및 완벽 중앙 정렬 -->
   <div class="footer-credit" onclick="openPoemModal()" style="cursor: pointer;" title="클릭하여 숨겨진 시 감상하기">
     Designed by msoo
   </div>
@@ -1344,7 +1355,7 @@
       players: Array(8).fill(''),
       matches: [],
       prizes: '',
-      photos: [] // 사진/문서 base64 배열
+      photos: []
     };
     if (!window.state.photos) window.state.photos = [];
 
@@ -1544,7 +1555,6 @@
         return;
       }
 
-      // 날짜별 그룹핑 (등록 순서 유지)
       const dateGroups = {};
       photos.forEach(item => {
         const d = item.date || '기타';
@@ -1554,7 +1564,6 @@
 
       let html = '';
       Object.keys(dateGroups).forEach((dateKey) => {
-        // 날짜 구분선: 좌우 실선 + 중앙 날짜 텍스트 (---------- 2026. 10. 5(월) ----------)
         html += `
           <div style="display: flex; align-items: center; text-align: center; margin: 8px 0 4px 0;">
             <div style="flex: 1; border-bottom: 1.5px solid #cbd5e1;"></div>
@@ -1591,7 +1600,6 @@
       reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
-          // 용량 최적화 리사이징 (최대 800px)
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
@@ -1628,7 +1636,6 @@
 
           window.state.photos.unshift(newPhoto);
 
-          // 데이터 과부하 방지 (최대 15장 보관)
           if (window.state.photos.length > 15) window.state.photos.pop();
 
           saveState(true);
@@ -2084,7 +2091,6 @@
     }
 
     window.requestSaveEvent = function() {
-      // 1. 경기명 확인
       const titleInput = document.getElementById('eventTitle');
       const title = (titleInput && titleInput.value.trim()) || (window.state.eventTitle && window.state.eventTitle.trim()) || '';
       if (!title) {
@@ -2096,7 +2102,6 @@
         return;
       }
 
-      // 2. 선수 등록 확인 (설정된 인원수 기준 최소 4명 이상 입력 여부)
       const enteredPlayers = (window.state.players || []).filter(name => name && name.trim() !== '');
       if (enteredPlayers.length < 4) {
         showToast('⚠️ [선수] 탭에서 선수를 먼저 등록해주세요.');
@@ -2106,10 +2111,9 @@
         return;
       }
 
-      // 3. 경기 점수 입력 확인 (최소 1경기 이상 점수가 입력되었는지 여부)
       const playedMatches = (window.state.matches || []).filter(m => m.s1 > 0 || m.s2 > 0);
       if (playedMatches.length === 0) {
-        showToast('⚠️️ [경기대진] 탭에서 경기 점수를 먼저 입력해주세요.');
+        showToast('⚠️ [경기대진] 탭에서 경기 점수를 먼저 입력해주세요.');
         switchTab('matches');
         return;
       }
@@ -2461,7 +2465,7 @@
       };
 
       updatePresence();
-      setInterval(updatePresence, 20000); // 20초 주기
+      setInterval(updatePresence, 20000);
 
       const presenceCol = collection(db, 'clubs', CLUB_ID, 'presence');
       onSnapshot(presenceCol, (snapshot) => {
