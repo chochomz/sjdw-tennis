@@ -869,7 +869,7 @@
                   <th style="width: 42px;">순위</th>
                   <th style="text-align: left; padding-left: 8px;">선수명</th>
                   <th style="width: 38px;">경기</th>
-                  <th style="width: 48px;">승-패</th>
+                  <th style="width: 48px;">승-양보</th>
                   <th style="width: 44px;">득실</th>
                   <th style="width: 44px;">승률</th>
                 </tr>
@@ -1395,7 +1395,7 @@
           if(isPlayed) {
               if(myTeamWin) { resultBadge = '<span style="color:#15803d; font-weight:900;">[승리]</span>'; cardStyle='background:#f0fdf4; border-color:#86efac;'; }
               else if(isDraw) { resultBadge = '<span style="color:#ca8a04; font-weight:900;">[무승부]</span>'; cardStyle='background:#fefce8; border-color:#fde047;'; }
-              else { resultBadge = '<span style="color:#e11d48; font-weight:900;">[패배]</span>'; cardStyle='background:#fff1f2; border-color:#fecdd3;'; }
+              else { resultBadge = '<span style="color:#e11d48; font-weight:900;">[양보]</span>'; cardStyle='background:#fff1f2; border-color:#fecdd3;'; }
           }
 
           const renderTeam = (team, isWin, isMyTeam) => {
@@ -1704,14 +1704,14 @@
           <tr style="background:#f1f5f9; border-bottom:1.5px solid #cbd5e1; color:#334155; font-weight:900;">
               <th style="padding:2px;">순위</th>
               <th style="padding:2px;">선수명</th>
-              <th style="padding:2px;">승-패</th>
+              <th style="padding:2px;">승-양보</th>
               <th style="padding:2px;">득실</th>
           </tr>`);
       standings.forEach((r, i) => {
           htmlArr.push(`<tr style="border-bottom:1px solid #e2e8f0; color:#1e293b; font-weight:bold;">
               <td style="padding:1.5px;">${i+1}</td>
               <td style="padding:1.5px;">${r.idx}-${r.name}</td>
-              <td style="padding:1.5px;">${r.win}승 ${r.loss}패</td>
+              <td style="padding:1.5px;">${r.win}승 ${r.loss}양보</td>
               <td style="padding:1.5px;">${r.diff > 0 ? '+'+r.diff : r.diff}</td>
           </tr>`);
       });
@@ -1722,7 +1722,7 @@
       
       standings.forEach((r, i) => {
           htmlArr.push(`<div style="font-size:9.5px; border:1px solid #cbd5e1; border-radius:3px; padding:3px; background:#f8fafc;">`);
-          htmlArr.push(`<div style="font-weight:900; margin-bottom:1.5px; font-size:10.5px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:1.5px;">${i+1}. ${r.idx}-${r.name} <span style="font-weight:normal; color:#64748b; font-size:9px;">(${r.win}승${r.loss}패)</span></div>`);
+          htmlArr.push(`<div style="font-weight:900; margin-bottom:1.5px; font-size:10.5px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:1.5px;">${i+1}. ${r.idx}-${r.name} <span style="font-weight:normal; color:#64748b; font-size:9px;">(${r.win}승${r.loss}양보)</span></div>`);
           
           const pIdx = r.originalIdx;
           let matchCount = 0;
@@ -1748,7 +1748,7 @@
                   const opp1Name = window.state.players[oppTeam[0]] || `선수${oppTeam[0]+1}`;
                   const opp2Name = window.state.players[oppTeam[1]] || `선수${oppTeam[1]+1}`;
                   
-                  let resBadge = '<span style="color:#e11d48; font-weight:900;">패</span>';
+                  let resBadge = '<span style="color:#e11d48; font-weight:900;">양보</span>';
                   if(isWin) resBadge = '<span style="color:#15803d; font-weight:900;">승</span>';
                   else if(isDraw) resBadge = '<span style="color:#ca8a04; font-weight:900;">무</span>';
                   
@@ -1921,7 +1921,7 @@
       txt += `[순위 결과]\n`;
       getStandings().forEach((r, i) => {
         const diffText = r.diff > 0 ? `+${r.diff}` : r.diff;
-        txt += `${i + 1}위 - ${r.idx}-${r.name} - ${r.win}승 ${r.loss}패 (${diffText})\n`;
+        txt += `${i + 1}위 - ${r.idx}-${r.name} - ${r.win}승 ${r.loss}양보 (${diffText})\n`;
       });
       
       if (customMsg) {
