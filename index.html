@@ -1202,13 +1202,8 @@
         <button onclick="closePhotosModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
-      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 6px 8px; margin-bottom: 10px; font-size: 10.5px; font-weight: 800; color: #15803d; line-height: 1.2; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; letter-spacing: -0.4px;">
-        <span>💡</span>
-        <span>누구든지 사진이나 파일을 자유롭게 올리고 삭제할 수 있습니다.</span>
-      </div>
-      
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #f8fafc; padding: 8px 10px; border-radius: 10px; border: 1px dashed #cbd5e1;">
-        <span style="font-size: 11px; color: #475569; font-weight: 700;"> 사진 및 경기 파일첨부</span>
+        <span style="font-size: 11px; color: #475569; font-weight: 700;">사진 및 경기 파일 첨부 하세요.</span>
         <label style="background: var(--primary); color: #ffffff; font-size: 11.5px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
           ➕ 파일선택
           <input type="file" id="photoFileInput" accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;" />
@@ -1278,14 +1273,14 @@
         <circle cx="82" cy="18" r="14" fill="#ffffff" filter="blur(1px)"/>
         <path d="M10,82 Q35,48 55,82 T95,82" fill="none" stroke="#ffffff" stroke-width="1.2"/>
       </svg>
-      <div style="font-size: 10px; letter-spacing: 2px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; margin-bottom: 4px; font-weight: 700;">Tennis & Poem</div>
+      <div style="font-size: 10px; letter-spacing: 2px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; margin-bottom: 4px; font-weight: 700;">Tennis & Literature</div>
       <h3 style="font-size: 17px; font-weight: 900; color: #ffffff; margin-bottom: 14px; position: relative; z-index: 1; letter-spacing: -0.2px; font-family: 'Nanum Myeongjo', 'Batang', '바탕', serif; text-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);">
         - 코트와 라켓과 공의 시 -
       </h3>
       <div style="font-size: 14.5px; line-height: 1.75; font-weight: 500; position: relative; z-index: 1; font-family: 'Nanum Myeongjo', 'Batang', '바탕', serif; color: #ffffff; letter-spacing: -0.3px;">
         치는 날까지<br>
         코트를 우러러<br>
-        한 샷 부끄럼이 없기를<br>
+        한 샷 부끄럼이 없도록<br>
         라켓에 이는 바람에도<br>
         나는 괴로워했다<br>
         <span style="display:block; height: 10px;"></span>
@@ -1555,6 +1550,7 @@
         return;
       }
 
+      // 날짜별 그룹핑 (등록 순서 유지)
       const dateGroups = {};
       photos.forEach(item => {
         const d = item.date || '기타';
@@ -1565,12 +1561,10 @@
       let html = '';
       Object.keys(dateGroups).forEach((dateKey) => {
         html += `
-          <div style="display: flex; align-items: center; text-align: center; margin: 8px 0 4px 0;">
-            <div style="flex: 1; border-bottom: 1.5px solid #cbd5e1;"></div>
-            <span style="padding: 0 8px; font-size: 11px; font-weight: 900; color: #64748b; white-space: nowrap; letter-spacing: -0.3px;">
-              ───── ${dateKey} ─────
+          <div style="text-align: center; margin: 10px 0 6px 0;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748b; letter-spacing: -0.2px;">
+              ────────── ${dateKey} ──────────
             </span>
-            <div style="flex: 1; border-bottom: 1.5px solid #cbd5e1;"></div>
           </div>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px;">
         `;
