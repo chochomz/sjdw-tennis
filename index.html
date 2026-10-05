@@ -679,12 +679,12 @@
     .footer-credit {
       width: 100%;
       max-width: 440px;
-      text-align: right;
-      padding: 8px 12px 8px 0;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.7);
-      font-weight: 700;
-      letter-spacing: 0.5px;
+      text-align: center;
+      padding: 12px 0;
+      font-size: 19px;
+      color: rgba(255, 255, 255, 0.9);
+      font-family: "Brush Script MT", "Caveat", "Dancing Script", cursive;
+      letter-spacing: 0.8px;
     }
 
     .modal-backdrop {
@@ -947,7 +947,7 @@
   </div>
 
   <div class="footer-credit" onclick="openPoemModal()" style="cursor: pointer;" title="클릭하여 숨겨진 시 감상하기">
-    Designed by Soo
+    Designed by msoo
   </div>
 
   <div id="captureOverlay" class="capture-overlay">
@@ -1261,26 +1261,31 @@
   <div id="toast" class="toast-msg">알림 메시지</div>
 
   <div id="poemModal" class="modal-backdrop">
-    <div class="modal-box" style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #e2e8f0; border: 1px solid #3b82f6; text-align: center; position: relative; overflow: hidden; padding: 30px 20px; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);">
-      <svg style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.1; pointer-events:none;" viewBox="0 0 100 100">
-        <circle cx="80" cy="20" r="12" fill="#fbbf24" />
-        <path d="M10,80 Q30,50 50,80 T90,80" fill="none" stroke="#fff" stroke-width="1"/>
+    <div class="modal-box" style="background: linear-gradient(145deg, #091322, #172554 60%, #1e1b4b); color: #ffffff; border: 1.5px solid rgba(255, 255, 255, 0.25); text-align: center; position: relative; overflow: hidden; padding: 22px 20px 18px; box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.1); border-radius: 18px; max-width: 360px;">
+      <svg style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.08; pointer-events:none;" viewBox="0 0 100 100">
+        <circle cx="82" cy="18" r="14" fill="#ffffff" filter="blur(1px)"/>
+        <path d="M10,82 Q35,48 55,82 T95,82" fill="none" stroke="#ffffff" stroke-width="1.2"/>
       </svg>
-      <h3 style="font-size: 16px; font-weight: 900; color: #fbbf24; margin-bottom: 20px; position: relative; z-index: 1; letter-spacing: -0.5px; font-family: serif;">- 코트와 라켓과 공의 시 -</h3>
-      <div style="font-size: 14px; line-height: 2.2; font-weight: 600; position: relative; z-index: 1;">
-        치는날까지<br>
+      <div style="font-size: 10px; letter-spacing: 2px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; margin-bottom: 4px; font-weight: 700;">Tennis & Literature</div>
+      <h3 style="font-size: 17px; font-weight: 900; color: #ffffff; margin-bottom: 14px; position: relative; z-index: 1; letter-spacing: -0.2px; font-family: 'Nanum Myeongjo', 'Batang', '바탕', serif; text-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);">
+        - 코트와 라켓과 공의 시 -
+      </h3>
+      <div style="font-size: 14.5px; line-height: 1.75; font-weight: 500; position: relative; z-index: 1; font-family: 'Nanum Myeongjo', 'Batang', '바탕', serif; color: #ffffff; letter-spacing: -0.3px;">
+        치는 날까지<br>
         코트를 우러러<br>
         한 샷 부끄럼이 없도록<br>
         라켓에 이는 바람에도<br>
-        나는 괴로워 했다<br>
+        나는 괴로워했다<br>
+        <span style="display:block; height: 10px;"></span>
         공을 노래하는 마음으로<br>
         모든 승패를 인정해야지<br>
         그리고 나한테 주어진<br>
-        공을 쳐내야겠다<br><br>
+        공을 쳐내야겠다<br>
+        <span style="display:block; height: 10px;"></span>
         오늘 밤에도 공이<br>
         마음에 스치운다.
       </div>
-      <button onclick="closePoemModal()" style="margin-top: 25px; padding: 8px 24px; border-radius: 999px; background: rgba(255,255,255,0.15); color: #fff; font-weight: 800; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; position: relative; z-index: 1;">여운 간직하며 닫기</button>
+      <button onclick="closePoemModal()" style="margin-top: 18px; padding: 8px 24px; border-radius: 9999px; background: rgba(255,255,255,0.15); color: #ffffff; font-weight: 800; font-size: 12.5px; border: 1px solid rgba(255, 255, 255, 0.35); cursor: pointer; position: relative; z-index: 1; transition: all 0.2s ease;">여운 간직하며 닫기</button>
     </div>
   </div>
 
