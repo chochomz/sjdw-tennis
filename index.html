@@ -9,7 +9,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>세종 대왕테니스 클럽</title>
 
-  <!-- 모바일 기종 무관하게 100% 동일하게 렌더링되는 전용 영문 필기체 구글 웹폰트 로드 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
@@ -180,6 +179,23 @@
       0% { opacity: 0.4; transform: scale(0.85); }
       100% { opacity: 1; transform: scale(1.2); }
     }
+
+    .role-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.15s ease;
+    }
+    .role-badge:active { transform: scale(0.92); }
+    .role-badge.admin { background: rgba(34, 197, 94, 0.25); color: #bef264; border-color: #bef264; }
+    .role-badge.spectator { background: rgba(56, 189, 248, 0.25); color: #7dd3fc; border-color: #7dd3fc; }
 
     .club-title {
       font-size: 19px;
@@ -391,6 +407,7 @@
       border-radius: 10px;
       padding: 6px 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      transition: background-color 0.2s ease;
     }
     .player-slot-badge {
       width: 22px;
@@ -419,7 +436,6 @@
       font-weight: normal;
     }
 
-    /* 대진표 및 점수 입력 UI 최적화 */
     .match-list {
       flex: 1;
       overflow-y: auto;
@@ -548,7 +564,6 @@
       border-radius: 10px;
       border: 1px solid #cbd5e1;
     }
-    /* 모바일 자동확대(zoom) 및 화면 덜컹거림 방지 16px 폰트 및 고정 규격 */
     .score-input {
       width: 34px;
       height: 34px;
@@ -563,12 +578,23 @@
       -webkit-appearance: none;
       appearance: none;
       touch-action: manipulation;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
     }
     .score-input:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 2px rgba(21, 128, 61, 0.2);
     }
+    .score-input[readonly] {
+      background-color: #f1f5f9;
+      color: #475569;
+      border-color: #e2e8f0;
+      cursor: default;
+    }
+    .score-input[readonly]:focus {
+      border-color: #e2e8f0;
+      box-shadow: none;
+    }
+
     .btn-action-mini {
       font-size: 11px;
       font-weight: 800;
@@ -797,6 +823,33 @@
 </head>
 <body>
 
+  <!-- [최초 접속 역할 선택 게이트웨이 모달] -->
+  <div id="roleGateModal" class="modal-backdrop show" style="z-index: 200; background: rgba(6, 78, 59, 0.92); backdrop-filter: blur(4px);">
+    <div class="modal-box" style="text-align: center; padding: 26px 20px; border: 2px solid #bef264;">
+      <div style="font-size: 38px; margin-bottom: 6px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));">🎾</div>
+      <h2 style="font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 4px;">세종 대왕테니스 클럽</h2>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 22px;">접속하실 모드를 선택해 주세요.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+        <!-- 총무 / 경기이사 버튼 -->
+        <button onclick="selectUserRole('admin')" style="background: #15803d; color: #ffffff; border: none; padding: 13px 10px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.35); transition: transform 0.1s ease;">
+          <span style="font-size: 15px; font-weight: 900;">⚡ 총무 / 경기이사</span>
+          <span style="font-size: 11px; font-weight: 700; opacity: 0.92; letter-spacing: -0.3px;">(선수, 대진, 결과, 저장, 사진등록, 공유)</span>
+        </button>
+
+        <!-- 일반회원 버튼 -->
+        <button onclick="selectUserRole('spectator')" style="background: #f8fafc; color: #1e293b; border: 2px solid #cbd5e1; padding: 13px 10px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: transform 0.1s ease;">
+          <span style="font-size: 15px; font-weight: 900;">👀 일반회원</span>
+          <span style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: -0.3px;">(실시간 참관 전용)</span>
+        </button>
+      </div>
+      
+      <p style="margin-top: 16px; font-size: 10.5px; color: #94a3b8; line-height: 1.4;">
+        ※ 일반회원 모드는 점수 변경이 차단되어 안심하고 실시간 경기 상황을 보실 수 있습니다.
+      </p>
+    </div>
+  </div>
+
   <div class="app-card">
 
     <header class="app-header">
@@ -805,6 +858,7 @@
         <span id="liveDateTime">시간 동기화 중...</span>
         <span id="syncLamp" class="sync-lamp" onclick="openSyncInfoModal()" title="클릭하여 동기화 상태 설명 보기"></span>
         <span id="userCountBadge" style="font-size: 10px; font-weight: 800; color: var(--accent); margin-left: 2px; border-left: 1px solid rgba(255,255,255,0.25); padding-left: 5px; cursor: default;">user: 1명</span>
+        <span id="roleIndicatorBadge" class="role-badge spectator" onclick="openRoleSwitchModal()" title="클릭하여 역할 변경">👀 참관 모드</span>
       </div>
       
       <h1 class="club-title">
@@ -889,7 +943,7 @@
         </div>
 
         <div style="padding-top: 8px; margin-top: 6px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 11px; color: var(--primary); font-weight: 800;">⚡ 엔터 키 ➔ 다음 칸 이동</span>
+          <span id="playerInputHint" style="font-size: 11px; color: var(--primary); font-weight: 800;">⚡ 엔터 키 ➔ 다음 칸 이동</span>
           <button onclick="switchTab('matches')" class="btn-primary-large" style="width: auto; padding: 7px 14px; font-size: 13px;">
             경기대진 ➔
           </button>
@@ -905,9 +959,9 @@
               0/0 완료
             </span>
           </div>
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <button onclick="requestResetScores()" class="btn-action-mini btn-danger">전체초기화</button>
-            <button onclick="requestRebuildMatches()" class="btn-action-mini btn-secondary">대진재배정</button>
+          <div id="adminMatchBtns" style="display: flex; align-items: center; gap: 4px;">
+            <button onclick="requestResetScores()" class="btn-action-mini btn-danger admin-only">전체초기화</button>
+            <button onclick="requestRebuildMatches()" class="btn-action-mini btn-secondary admin-only">대진재배정</button>
           </div>
         </div>
         <div id="matchesCompactList" class="match-list"></div>
@@ -916,8 +970,8 @@
       <!-- [탭 3] 결과 -->
       <section id="tab-results" class="tab-section hidden">
         <div>
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 10px; padding-top: 2px;">
-            <button onclick="requestSaveEvent()" class="btn-outline-mini-compact" title="현재 대회 저장">
+          <div id="resultsActionsGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 10px; padding-top: 2px;">
+            <button id="btnSaveEvent" onclick="requestSaveEvent()" class="btn-outline-mini-compact admin-only" title="현재 대회 저장">
               💾 경기저장
             </button>
             <button onclick="openArchiveModal()" class="btn-outline-mini-compact" title="저장된 대회 불러오기">
@@ -971,6 +1025,7 @@
     Designed by msoo
   </div>
 
+  <!-- [캡처 오버레이] -->
   <div id="captureOverlay" class="capture-overlay">
     <div class="capture-topbar">
       <span>📸 이 화면을 캡처하여 공유하세요</span>
@@ -979,6 +1034,7 @@
     <div id="captureContent" class="capture-scroll"></div>
   </div>
 
+  <!-- [모달: 이용 가이드] -->
   <div id="manualModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
@@ -988,41 +1044,28 @@
 
       <div style="font-size: 12.5px; color: #334155; line-height: 1.6; max-height: 62vh; overflow-y: auto; padding-right: 6px; text-align: left; display: flex; flex-direction: column; gap: 14px;">
         <div style="background: #f8fafc; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">1. 📱 접속 및 기본 환경 설정</div>
+          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">1. 📱 역할 선택 및 권한</div>
           <ul style="padding-left: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
-            <li><b>어디서 접속하나요?</b> 제공된 링크를 스마트폰(사파리, 크롬)이나 카카오톡 브라우저로 열면 별도 설치 없이 즉시 실행됩니다.</li>
-            <li><b>⚡ 실시간 동기화 & 보안:</b> 접속한 회원분이 누구든지 수정하면 바로 적용됩니다. 접속정보는 확인이 불가능 하도록 보안처리 했으며 자유롭게 사용 하시면 됩니다.</li>
-            <li><b>🎨 사계절 테마 버튼:</b> 테니스 라켓 아이콘을 클릭하여 봄, 여름, 가을, 겨울 8가지 테마 색상으로 배경을 바꿀 수 있습니다.</li>
-            <li><b>🏷️ 경기명 입력:</b> 상단 입력창에 오늘 모임 이름을 자유롭게 입력하면 자동 저장됩니다.</li>
-            <li><b>📜 규칙 버튼:</b> 코트 에티켓, 기본 규칙, 경기 규칙, 심판 규칙, 관람 규칙을 상세히 확인할 수 있습니다.</li>
+            <li><b>⚡ 총무/경기이사:</b> 대진표 생성, 선수 이름 및 점수 입력, 경기 저장을 전담합니다.</li>
+            <li><b>👀 일반회원:</b> 실시간 경기 스코어와 순위표를 안전하게 열람합니다. (터치해도 데이터가 변경되지 않음)</li>
+            <li><b>모드 전환:</b> 상단 시간표 우측의 모드 뱃지를 터치하면 언제든 역할을 다시 변경할 수 있습니다.</li>
           </ul>
         </div>
 
         <div style="background: #f8fafc; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">2. 📝 1단계: 선수 등록 및 대진 배정</div>
+          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">2. 📝 선수 등록 및 대진 배정</div>
           <ul style="padding-left: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
             <li><b>참석 인원 설정:</b> [선수] 탭에서 참석 인원(4명~16명)을 선택합니다. (선택 즉시 최적의 KDK 대진표 자동 배정)</li>
             <li><b>KDK 버전 선택:</b> 기본 KDK v2010 또는 KDK v2010 (4게임) 모드를 선택할 수 있습니다.</li>
-            <li><b>⚡ 선수 이름 입력:</b> 1번부터 차례대로 이름을 입력합니다. 키보드의 [엔터(Enter)] 키를 누르면 다음 선수 입력 칸으로 바로 이동합니다.</li>
+            <li><b>선수 이름 입력:</b> 엔터(Enter) 키로 다음 칸으로 빠르게 이동하며 입력할 수 있습니다.</li>
           </ul>
         </div>
 
         <div style="background: #f8fafc; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">3. 🎯 2단계: 경기 진행 및 점수 입력</div>
+          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">3. 🎯 점수 입력 및 실시간 중계</div>
           <ul style="padding-left: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
-            <li><b>대진표 확인:</b> [경기대진] 탭에서 각 코트별 경기 대진, 파트너, 휴식 선수를 한눈에 파악합니다.</li>
-            <li><b>⚡ 스마트 스코어 입력:</b> 모바일 화면 움직임 없이 6을 입력하면 바로 우측 점수로 넘어가고, 2를 마저 입력 완료하면 다음 경기 첫 번째 칸으로 안전하게 자동 이동합니다.</li>
-            <li><b>⚡ 실시간 동기화:</b> 상단 시계 우측의 램프가 실시간 연동 상태를 보여줍니다.</li>
-          </ul>
-        </div>
-
-        <div style="background: #f8fafc; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 900; color: var(--primary); font-size: 14px; margin-bottom: 6px;">4. 🏆 3단계: 실시간 순위 확인 및 공유</div>
-          <ul style="padding-left: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
-            <li><b>실시간 순위표:</b> 승수 &gt; 득실차 &gt; 승률 순서로 완벽하게 자동 정렬됩니다.</li>
-            <li><b>📷 사진/문서 등록:</b> 경기장 사진이나 안내 문서를 등록하여 회원들과 함께 공유할 수 있습니다.</li>
-            <li><b>💬 클럽카톡방 공유:</b> 버튼 하나로 정돈된 순위 결과 텍스트를 복사하여 카카오톡에 전송합니다.</li>
-            <li><b>📸 캡처공유(사진):</b> 모든 결과가 한 화면에 정리된 뷰가 열려 스크린샷으로 공유하기 편리합니다.</li>
+            <li><b>스마트 입력:</b> 점수 1글자 입력 시 상대편 점수칸으로, 완료 시 다음 경기로 자동 이동합니다.</li>
+            <li><b>실시간 공유:</b> 경기이사가 점수를 기입하는 즉시 모든 일반회원의 화면에 실시간 자동 반영됩니다.</li>
           </ul>
         </div>
       </div>
@@ -1031,6 +1074,7 @@
     </div>
   </div>
 
+  <!-- [모달: 공식 규칙] -->
   <div id="rulesModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1093,6 +1137,7 @@
     </div>
   </div>
 
+  <!-- [모달: 테마] -->
   <div id="themeModal" class="modal-backdrop">
     <div class="modal-box">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
@@ -1139,6 +1184,7 @@
     </div>
   </div>
 
+  <!-- [모달: 동기화 안내] -->
   <div id="syncInfoModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 320px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1164,7 +1210,7 @@
           <span class="sync-lamp offline" style="margin-top: 3px;"></span>
           <div>
             <b style="color: #e11d48;">빨간불 (오프라인/로컬)</b>
-            <p style="color: #64748b; font-size: 11px;">통신 끊김 상태입니다. 기기 자체(로컬 저장소)에 안전하게 보관됩니다.</p>
+            <p style="color: #64748b; font-size: 11px;">통신 끊김 상태입니다. 기기 자체(로컬 저장소)에 보관됩니다.</p>
           </div>
         </div>
       </div>
@@ -1172,6 +1218,7 @@
     </div>
   </div>
 
+  <!-- [모달: 확인 대화상자] -->
   <div id="confirmModal" class="modal-backdrop" style="z-index: 70;">
     <div class="modal-box" style="text-align: center; padding: 20px;">
       <h3 id="confirmTitle" style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 8px;"></h3>
@@ -1183,6 +1230,7 @@
     </div>
   </div>
 
+  <!-- [모달: 파트너 분석] -->
   <div id="partnerModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 360px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1194,6 +1242,7 @@
     </div>
   </div>
 
+  <!-- [모달: 아카이브 목록] -->
   <div id="archiveModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 360px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
@@ -1205,6 +1254,7 @@
     </div>
   </div>
 
+  <!-- [모달: 사진/문서] -->
   <div id="photosModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
@@ -1212,9 +1262,9 @@
         <button onclick="closePhotosModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #f8fafc; padding: 8px 10px; border-radius: 10px; border: 1px dashed #cbd5e1;">
+      <div id="photoUploadRow" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #f8fafc; padding: 8px 10px; border-radius: 10px; border: 1px dashed #cbd5e1;">
         <span style="font-size: 11px; color: #475569; font-weight: 700;">사진 및 경기 파일 첨부 하세요.</span>
-        <label style="background: var(--primary); color: #ffffff; font-size: 11.5px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+        <label id="photoUploadBtnLabel" style="background: var(--primary); color: #ffffff; font-size: 11.5px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
           ➕ 파일선택
           <input type="file" id="photoFileInput" accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;" />
         </label>
@@ -1226,6 +1276,7 @@
     </div>
   </div>
 
+  <!-- [라이트박스] -->
   <div id="photoLightbox" class="modal-backdrop" style="z-index: 120; background: rgba(0,0,0,0.9); padding: 10px;" onclick="closePhotoLightbox()">
     <div style="position: relative; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; align-items: center;" onclick="event.stopPropagation();">
       <img id="lightboxImg" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" />
@@ -1233,6 +1284,7 @@
     </div>
   </div>
 
+  <!-- [모달: 상품 안내] -->
   <div id="prizesModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 360px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
@@ -1243,11 +1295,12 @@
       <textarea id="eventPrizesInput" rows="6" placeholder="예:&#10;1위: 고급 테니스 라켓백 1개&#10;2위: 기능성 테니스 양말 1세트&#10;3위: 그립 2개 세트" style="width: 100%; font-size: 13px; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; resize: none;"></textarea>
       <div style="display: flex; gap: 8px; margin-top: 12px;">
         <button onclick="closePrizesModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">닫기</button>
-        <button onclick="saveEventPrizes()" class="btn-primary-large" style="flex: 1; padding: 10px; font-size: 13px;">상품 저장하기</button>
+        <button id="btnSavePrizes" onclick="saveEventPrizes()" class="btn-primary-large admin-only" style="flex: 1; padding: 10px; font-size: 13px;">상품 저장하기</button>
       </div>
     </div>
   </div>
 
+  <!-- [모달: 카톡 공유] -->
   <div id="shareMessageModal" class="modal-backdrop" style="z-index: 70;">
     <div class="modal-box">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 8px;">
@@ -1263,6 +1316,7 @@
     </div>
   </div>
 
+  <!-- [모달: 복사 백업] -->
   <div id="copyBackupModal" class="modal-backdrop">
     <div class="modal-box">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 8px;">
@@ -1276,6 +1330,7 @@
 
   <div id="toast" class="toast-msg">알림 메시지</div>
 
+  <!-- [모달: 감성 시] -->
   <div id="poemModal" class="modal-backdrop">
     <div class="modal-box" style="background: linear-gradient(145deg, #091322, #172554 60%, #1e1b4b); color: #ffffff; border: 1.5px solid rgba(255, 255, 255, 0.25); text-align: center; position: relative; overflow: hidden; padding: 22px 20px 18px; box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.1); border-radius: 18px; max-width: 360px;">
       <svg style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.08; pointer-events:none;" viewBox="0 0 100 100">
@@ -1332,6 +1387,94 @@
     let archiveCurrentPage = 1;
     let cachedArchives = [];
     const ARCHIVE_PAGE_SIZE = 10;
+
+    // [권한 상태 변수] 기본값: spectator
+    window.currentUserRole = 'spectator'; // 'admin' | 'spectator'
+
+    // 역할 선택 처리
+    window.selectUserRole = function(role) {
+      window.currentUserRole = role;
+      const modal = document.getElementById('roleGateModal');
+      if (modal) modal.classList.remove('show');
+
+      applyRolePermissions(role === 'admin');
+
+      if (role === 'admin') {
+        showToast('⚡ 총무 / 경기이사 모드로 입장했습니다.');
+      } else {
+        showToast('👀 일반회원 참관 모드로 입장했습니다.');
+        // 참관자는 순위표나 경기 결과가 가장 중요하므로 결과 탭으로 우선 전환
+        switchTab('results');
+      }
+    };
+
+    window.openRoleSwitchModal = function() {
+      const modal = document.getElementById('roleGateModal');
+      if (modal) modal.classList.add('show');
+    };
+
+    // 역할에 따른 UI 잠금 및 가시성 제어
+    function applyRolePermissions(isAdmin) {
+      // 1. 헤더 역할 뱃지
+      const roleBadge = document.getElementById('roleIndicatorBadge');
+      if (roleBadge) {
+        if (isAdmin) {
+          roleBadge.className = 'role-badge admin';
+          roleBadge.innerText = '⚡ 총무/경기이사 모드';
+          roleBadge.title = '클릭하여 역할 변경 (현재: 총무/경기이사)';
+        } else {
+          roleBadge.className = 'role-badge spectator';
+          roleBadge.innerText = '👀 참관 모드';
+          roleBadge.title = '클릭하여 역할 변경 (현재: 일반회원 참관)';
+        }
+      }
+
+      // 2. 관리자 전용 버튼 표시 / 숨김
+      document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = isAdmin ? '' : 'none';
+      });
+
+      // 사진 업로드 버튼 숨김 / 표시
+      const photoUploadRow = document.getElementById('photoUploadRow');
+      if (photoUploadRow) {
+        photoUploadRow.style.display = isAdmin ? 'flex' : 'none';
+      }
+
+      // 상품 저장 버튼 숨김 및 textarea 읽기전용화
+      const prizesInput = document.getElementById('eventPrizesInput');
+      if (prizesInput) {
+        prizesInput.readOnly = !isAdmin;
+      }
+
+      // 3. 인원 및 KDK 버전 셀렉트 비활성화
+      const kdkSel = document.getElementById('kdkVersionSelect');
+      const countSel = document.getElementById('playerCountSelect');
+      if (kdkSel) {
+        kdkSel.disabled = !isAdmin;
+        kdkSel.style.opacity = isAdmin ? '1' : '0.75';
+      }
+      if (countSel) {
+        countSel.disabled = !isAdmin;
+        countSel.style.opacity = isAdmin ? '1' : '0.75';
+      }
+
+      // 4. 경기명 입력창 읽기전용 처리
+      const titleInput = document.getElementById('eventTitle');
+      if (titleInput) {
+        titleInput.readOnly = !isAdmin;
+      }
+
+      // 5. 선수 입력 힌트 안내 문구 전환
+      const playerHint = document.getElementById('playerInputHint');
+      if (playerHint) {
+        playerHint.innerText = isAdmin ? '⚡ 엔터 키 ➔ 다음 칸 이동' : '👀 실시간 참관 모드 (읽기 전용)';
+      }
+
+      // 6. 현재 렌더링된 인풋창들의 readonly 갱신
+      document.querySelectorAll('.player-slot-input, .score-input').forEach(inp => {
+        inp.readOnly = !isAdmin;
+      });
+    }
 
     window.openSyncInfoModal = function() { document.getElementById('syncInfoModal').classList.add('show'); };
     window.closeSyncInfoModal = function() { document.getElementById('syncInfoModal').classList.remove('show'); };
@@ -1394,7 +1537,9 @@
       window.state.theme = themeKey;
       applyTheme(themeKey);
       closeThemeModal();
-      saveState(true);
+      if (window.currentUserRole === 'admin') {
+        saveState(true);
+      }
       showToast('테마가 적용되었습니다.');
     }
     function applyTheme(themeKey) { document.body.setAttribute('data-theme', themeKey || 'summer'); }
@@ -1406,6 +1551,7 @@
     window.closeRulesModal = function() { document.getElementById('rulesModal').classList.remove('show'); }
 
     window.handleEventTitleInput = function(inputEl) {
+      if (window.currentUserRole !== 'admin') return;
       const val = inputEl.value;
       window.state.eventTitle = val;
       inputEl.style.width = !val ? '14ch' : `${Math.max(val.length * 2, 14)}ch`;
@@ -1428,10 +1574,10 @@
       });
       if (tabKey === 'matches') renderMatches();
       if (tabKey === 'results') renderResults();
-      saveState(false);
     }
 
     window.changeKdkVersion = function(val) {
+      if (window.currentUserRole !== 'admin') return;
       window.state.kdkVersion = val;
       buildKdkSchedule(false);
       renderPlayerInputs(true);
@@ -1440,6 +1586,7 @@
     }
 
     window.changePlayerCount = function(val) {
+      if (window.currentUserRole !== 'admin') return;
       const count = parseInt(val, 10);
       window.state.count = count;
       const newPlayers = [];
@@ -1473,22 +1620,24 @@
       const cSel = document.getElementById('playerCountSelect');
       if (cSel) cSel.value = window.state.count || 8;
 
+      const isAdmin = (window.currentUserRole === 'admin');
       let htmlArr = [];
       window.state.players.forEach((name, idx) => {
         htmlArr.push(`
-          <div class="player-slot">
+          <div class="player-slot" style="${!isAdmin ? 'background: #f1f5f9;' : ''}">
             <div class="player-slot-badge">${idx + 1}</div>
             <input 
               id="player-input-${idx}"
               type="text" 
               value="${name || ''}" 
               maxlength="8" 
-              placeholder="선수입력"
+              placeholder="${isAdmin ? '선수입력' : '미등록'}"
               autocomplete="off"
               autocorrect="off"
               autocapitalize="off"
               spellcheck="false"
               enterkeyhint="next"
+              ${!isAdmin ? 'readonly style="cursor: default;"' : ''}
               oninput="updatePlayerName(${idx}, this.value)"
               onkeydown="handlePlayerEnter(event, ${idx})"
               class="player-slot-input"
@@ -1500,6 +1649,7 @@
     }
 
     window.handlePlayerEnter = function(e, currentIdx) {
+      if (window.currentUserRole !== 'admin') return;
       if (e.key === 'Enter') {
         e.preventDefault();
         const nextInput = document.getElementById(`player-input-${currentIdx + 1}`);
@@ -1509,6 +1659,7 @@
     }
 
     window.updatePlayerName = function(idx, val) {
+      if (window.currentUserRole !== 'admin') return;
       window.state.players[idx] = val;
       saveState(false);
       if (window.state.currentTab === 'matches') renderMatches();
@@ -1533,6 +1684,9 @@
 
     window.openPhotosModal = function() {
       renderPhotosGrid();
+      const isAdmin = (window.currentUserRole === 'admin');
+      const uploadRow = document.getElementById('photoUploadRow');
+      if (uploadRow) uploadRow.style.display = isAdmin ? 'flex' : 'none';
       document.getElementById('photosModal').classList.add('show');
     };
     window.closePhotosModal = function() {
@@ -1559,6 +1713,7 @@
         return;
       }
 
+      const isAdmin = (window.currentUserRole === 'admin');
       const dateGroups = {};
       photos.forEach(item => {
         const d = item.date || '기타';
@@ -1583,7 +1738,7 @@
           html += `
             <div style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #cbd5e1; background: #0f172a;">
               <img src="${photoUrl}" onclick="showPhotoLightbox('${photoUrl}')" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" />
-              <button onclick="deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.88); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">✕</button>
+              ${isAdmin ? `<button onclick="deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.88); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">✕</button>` : ''}
             </div>
           `;
         });
@@ -1595,6 +1750,7 @@
     }
 
     window.handlePhotoUpload = function(event) {
+      if (window.currentUserRole !== 'admin') return;
       const file = event.target.files[0];
       if (!file) return;
 
@@ -1651,6 +1807,7 @@
     };
 
     window.deletePhoto = function(photoId) {
+      if (window.currentUserRole !== 'admin') return;
       openConfirmModal('사진 삭제', '이 사진을 목록에서 삭제하시겠습니까?', () => {
         if (!window.state.photos) return;
         window.state.photos = window.state.photos.filter((p, idx) => {
@@ -1674,13 +1831,21 @@
 
     window.openPrizesModal = function() {
       const area = document.getElementById('eventPrizesInput');
-      if (area) area.value = window.state.prizes || '';
+      if (area) {
+        area.value = window.state.prizes || '';
+        area.readOnly = (window.currentUserRole !== 'admin');
+      }
+      const saveBtn = document.getElementById('btnSavePrizes');
+      if (saveBtn) {
+        saveBtn.style.display = (window.currentUserRole === 'admin') ? '' : 'none';
+      }
       document.getElementById('prizesModal').classList.add('show');
     }
     window.closePrizesModal = function() {
       document.getElementById('prizesModal').classList.remove('show');
     }
     window.saveEventPrizes = function() {
+      if (window.currentUserRole !== 'admin') return;
       const area = document.getElementById('eventPrizesInput');
       if (area) {
         window.state.prizes = area.value.trim();
@@ -1833,11 +1998,14 @@
         }
       }
       window.state.matches = generated;
-      saveState(true);
+      if (window.currentUserRole === 'admin') {
+        saveState(true);
+      }
       if (notify) showToast(`${window.state.count}명 (${window.state.kdkVersion === 'v2010_4g' ? '4게임' : '표준'}) 대진표가 배정되었습니다.`);
     }
 
     window.requestRebuildMatches = function() {
+      if (window.currentUserRole !== 'admin') return;
       openConfirmModal('대회 재배정', '기존 대진 결과가 모두 초기화되고 새로 배정됩니다. 진행하시겠습니까?', () => {
         buildKdkSchedule(true);
         renderResults();
@@ -1846,11 +2014,11 @@
     }
 
     window.requestResetScores = function() {
+      if (window.currentUserRole !== 'admin') return;
       openConfirmModal(
         '경기 전체 초기화', 
         '이 경기의 입력된 자료들이 삭제 되므로 먼저 결과 페이지에서 저장 한 후 진행해 주세요.', 
         () => {
-          // 선수 명단 및 경기 대진 기록 초기화
           window.state.players = Array(window.state.count).fill('');
           if (window.state.matches) {
             window.state.matches.forEach(m => { m.s1 = 0; m.s2 = 0; });
@@ -1868,7 +2036,6 @@
       const container = document.getElementById('matchesCompactList');
       if (!container) return;
       
-      // 사용자가 점수 입력 중일 때는 전체 DOM을 날려 포커스가 튀거나 키패드가 닫히는 현상 방지
       const activeEl = document.activeElement;
       if (activeEl && activeEl.classList.contains('score-input')) {
         updateAllMatchCardStates();
@@ -1878,6 +2045,7 @@
 
       if (!window.state.matches || window.state.matches.length === 0) buildKdkSchedule(false);
 
+      const isAdmin = (window.currentUserRole === 'admin');
       let htmlArr = [];
       window.state.matches.forEach((m, matchIndex) => {
         const isPlayed = (m.s1 > 0 || m.s2 > 0);
@@ -1923,7 +2091,7 @@
                   maxlength="1" 
                   placeholder="0" 
                   value="${val1}" 
-                  onfocus="handleScoreFocus(this)"
+                  ${!isAdmin ? 'readonly tabindex="-1"' : 'onfocus="handleScoreFocus(this)"'}
                   oninput="handleNumericScoreChange(${m.id}, 1, this.value, ${matchIndex})" 
                   class="score-input"
                   autocomplete="off"
@@ -1937,7 +2105,7 @@
                   maxlength="1" 
                   placeholder="0" 
                   value="${val2}" 
-                  onfocus="handleScoreFocus(this)"
+                  ${!isAdmin ? 'readonly tabindex="-1"' : 'onfocus="handleScoreFocus(this)"'}
                   oninput="handleNumericScoreChange(${m.id}, 2, this.value, ${matchIndex})" 
                   class="score-input"
                   autocomplete="off"
@@ -1954,8 +2122,8 @@
       updateStats();
     }
 
-    // 터치 시 기존 값 전체 선택으로 편리한 재입력 지원
     window.handleScoreFocus = function(inputEl) {
+      if (window.currentUserRole !== 'admin') return;
       if (inputEl) {
         setTimeout(() => {
           try { inputEl.select(); } catch(e) {}
@@ -1963,14 +2131,13 @@
       }
     };
 
-    // [핵심 개선] 모바일에서 화면이 튀거나 넘어가지 않고, 6:2 입력 완료 시에만 다음 칸으로 안전하게 커서 대기
     window.handleNumericScoreChange = function(matchId, teamSide, rawVal, matchIndex) {
+      if (window.currentUserRole !== 'admin') return;
+
       const m = window.state.matches.find(item => item.id === matchId);
       if (!m) return;
 
       const inputEl = document.getElementById(`score-${matchIndex}-${teamSide}`);
-      
-      // 숫자 이외의 문자 제거 및 단일 글자 보정
       const cleanVal = rawVal.replace(/[^0-9]/g, '');
       if (inputEl && inputEl.value !== cleanVal) {
         inputEl.value = cleanVal;
@@ -1988,11 +2155,9 @@
         m.s1 = isNaN(num) ? 0 : num;
         updateSingleMatchCardState(matchIndex, m);
 
-        // 첫 번째 점수(예: 6) 입력 시 화면을 고정 상태로 두고 즉시 오른쪽 점수칸으로 포커스
         if (cleanVal !== '' && num <= 7) {
           const nextSideInput = document.getElementById(`score-${matchIndex}-2`);
           if (nextSideInput) {
-            // preventScroll로 모바일 브라우저가 화면을 마구 위아래로 흔드는 현상 원천 차단
             nextSideInput.focus({ preventScroll: true });
             setTimeout(() => {
               try { nextSideInput.select(); } catch(e) {}
@@ -2003,14 +2168,10 @@
         m.s2 = isNaN(num) ? 0 : num;
         updateSingleMatchCardState(matchIndex, m);
 
-        // 두 번째 점수(예: 2)까지 입력이 완료되면 다음 경기 첫 번째 칸으로 안전 이동
         if (cleanVal !== '' && num <= 7) {
           const nextMatchInput = document.getElementById(`score-${matchIndex + 1}-1`);
           if (nextMatchInput) {
-            // 화면 흔들림 없이 다음 매치 입력칸으로 포커스 이동 후 커서 대기
             nextMatchInput.focus({ preventScroll: true });
-            
-            // 키보드에 가려지지 않도록 필요한 경우에만 부드럽게 위치 정돈
             const rect = nextMatchInput.getBoundingClientRect();
             if (rect.bottom > window.innerHeight - 120) {
               nextMatchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2019,7 +2180,6 @@
               try { nextMatchInput.select(); } catch(e) {}
             }, 20);
           } else {
-            // 마지막 경기 입력 완료 시 키패드 닫기
             inputEl.blur();
             showToast('모든 경기 점수가 입력되었습니다! 🏆');
           }
@@ -2030,7 +2190,6 @@
       updateStats();
     };
 
-    // DOM을 다시 생성하지 않고 해당 카드의 상태와 색상만 가볍게 변경 (화면 흔들림 제로)
     function updateSingleMatchCardState(matchIndex, m) {
       const card = document.getElementById(`match-card-${matchIndex}`);
       const t1Box = document.getElementById(`team1-box-${matchIndex}`);
@@ -2208,6 +2367,10 @@
     }
 
     window.requestSaveEvent = function() {
+      if (window.currentUserRole !== 'admin') {
+        showToast('⚠️ 총무/경기이사 모드에서만 저장이 가능합니다.');
+        return;
+      }
       const titleInput = document.getElementById('eventTitle');
       const title = (titleInput && titleInput.value.trim()) || (window.state.eventTitle && window.state.eventTitle.trim()) || '';
       if (!title) {
@@ -2221,7 +2384,7 @@
 
       const enteredPlayers = (window.state.players || []).filter(name => name && name.trim() !== '');
       if (enteredPlayers.length < 4) {
-        showToast('⚠️ [선수] 탭에서 선수를 먼저 등록해주세요.');
+        showToast('⚠️️ [선수] 탭에서 선수를 먼저 등록해주세요.');
         switchTab('players');
         const firstInput = document.getElementById('player-input-0');
         if (firstInput) firstInput.focus();
@@ -2239,6 +2402,8 @@
     }
 
     async function saveCurrentEvent() {
+      if (window.currentUserRole !== 'admin') return;
+
       const titleInput = document.getElementById('eventTitle');
       const title = (titleInput && titleInput.value.trim()) || (window.state.eventTitle && window.state.eventTitle.trim()) || '대회';
       const now = new Date();
@@ -2320,6 +2485,7 @@
         return;
       }
 
+      const isAdmin = (window.currentUserRole === 'admin');
       const totalItems = cachedArchives.length;
       const totalPages = Math.ceil(totalItems / ARCHIVE_PAGE_SIZE);
       if (archiveCurrentPage > totalPages) archiveCurrentPage = totalPages;
@@ -2337,8 +2503,8 @@
             <span style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px;">${arc.date}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
-            <button onclick="requestLoadArchive('${arc.id}', '${arc.title.replace(/'/g, "\\'")}')" style="background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; cursor: pointer;">불러오기</button>
-            <button onclick="requestDeleteArchive('${arc.id}')" style="background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; cursor: pointer;">삭제</button>
+            ${isAdmin ? `<button onclick="requestLoadArchive('${arc.id}', '${arc.title.replace(/'/g, "\\'")}')" style="background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; cursor: pointer;">불러오기</button>` : ''}
+            ${isAdmin ? `<button onclick="requestDeleteArchive('${arc.id}')" style="background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; cursor: pointer;">삭제</button>` : `<span style="font-size: 11px; color: #94a3b8; font-weight: 700;">저장본</span>`}
           </div>
         `;
         listContainer.appendChild(item);
@@ -2361,10 +2527,12 @@
     window.closeArchiveModal = function() { document.getElementById('archiveModal').classList.remove('show'); }
     
     window.requestLoadArchive = function(id, title) {
+      if (window.currentUserRole !== 'admin') return;
       openConfirmModal('대회 불러오기', `'${title}' 대회를 불러오시겠습니까?<br><br><span style="color:#be123c;">※ 현재 진행 중인 데이터는 덮어씌워집니다.</span>`, () => { loadArchiveData(id); });
     }
 
     async function loadArchiveData(id) {
+      if (window.currentUserRole !== 'admin') return;
       let target = null;
 
       if (isCloudReady && db) {
@@ -2408,6 +2576,7 @@
     }
 
     window.requestDeleteArchive = function(id) {
+      if (window.currentUserRole !== 'admin') return;
       openConfirmModal('대회 삭제', '선택한 저장 기록을 삭제하시겠습니까?<br>(복구할 수 없습니다.)', async () => {
         try {
           if (isCloudReady && db) {
@@ -2538,7 +2707,13 @@
     window.openPoemModal = function() { document.getElementById('poemModal').classList.add('show'); }
     window.closePoemModal = function() { document.getElementById('poemModal').classList.remove('show'); }
 
+    // [클라우드 저장소 무결성 방어]
+    // 일반회원 모드일 때는 클라우드 및 로컬 마스터 저장을 원천 차단
     async function saveState(immediate = false) {
+      if (window.currentUserRole !== 'admin') {
+        return; // 참관 모드는 절대 클라우드에 쓰지 않음
+      }
+
       try {
         const titleInput = document.getElementById('eventTitle');
         if (titleInput) window.state.eventTitle = titleInput.value;
@@ -2634,12 +2809,11 @@
               const titleInput = document.getElementById('eventTitle');
               if (titleInput && window.state.eventTitle) {
                 titleInput.value = window.state.eventTitle;
-                handleEventTitleInput(titleInput);
+                titleInput.style.width = `${Math.max(window.state.eventTitle.length * 2, 14)}ch`;
               }
               applyTheme(window.state.theme || 'summer');
               renderPlayerInputs(false);
               
-              // 사용자가 현재 점수를 타이핑 중이지 않을 때만 전체 재렌더링
               const activeEl = document.activeElement;
               if (!activeEl || !activeEl.classList.contains('score-input')) {
                 renderMatches();
@@ -2652,7 +2826,9 @@
               isRemoteUpdate = false;
             }
           } else {
-            saveState(true);
+            if (window.currentUserRole === 'admin') {
+              saveState(true);
+            }
           }
         }, (err) => {
           console.warn("Snapshot error (fallback to local):", err);
@@ -2677,9 +2853,10 @@
       const titleInput = document.getElementById('eventTitle');
       if (titleInput && window.state.eventTitle) {
         titleInput.value = window.state.eventTitle;
-        handleEventTitleInput(titleInput);
+        titleInput.style.width = `${Math.max(window.state.eventTitle.length * 2, 14)}ch`;
       }
       switchTab(window.state.currentTab || 'players');
+      applyRolePermissions(false); // 기본은 참관 모드로 초기화
       initCloudSync();
     };
   </script>
