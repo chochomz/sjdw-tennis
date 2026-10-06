@@ -2141,7 +2141,7 @@
           htmlArr.push(`<tr style="border-bottom:1px solid #e2e8f0; color:#1e293b; font-weight:bold;">
               <td style="padding:1.5px;">${i+1}</td>
               <td style="padding:1.5px;">${r.idx}-${r.name}</td>
-              <td style="padding:1.5px;">${r.win}승 ${r.loss}패</td>
+              <td style="padding:1.5px;">${r.win}승리 ${r.loss}양보</td>
               <td style="padding:1.5px;">${r.diff > 0 ? '+'+r.diff : r.diff}</td>
           </tr>`);
       });
@@ -2152,7 +2152,7 @@
       
       standings.forEach((r, i) => {
           htmlArr.push(`<div style="font-size:9.5px; border:1px solid #cbd5e1; border-radius:3px; padding:3px; background:#f8fafc;">`);
-          htmlArr.push(`<div style="font-weight:900; margin-bottom:1.5px; font-size:10.5px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:1.5px;">${i+1}. ${r.idx}-${r.name} <span style="font-weight:normal; color:#64748b; font-size:9px;">(${r.win}승${r.loss}패)</span></div>`);
+          htmlArr.push(`<div style="font-weight:900; margin-bottom:1.5px; font-size:10.5px; color:#0f172a; border-bottom:1px solid #e2e8f0; padding-bottom:1.5px;">${i+1}. ${r.idx}-${r.name} <span style="font-weight:normal; color:#64748b; font-size:9px;">(${r.win}승리${r.loss}양보)</span></div>`);
           
           const pIdx = r.originalIdx;
           let matchCount = 0;
