@@ -144,15 +144,18 @@
     .clock-badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       background: rgba(0, 0, 0, 0.35);
       color: var(--accent);
-      padding: 3px 10px;
+      padding: 3px 8px;
       border-radius: 9999px;
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
     }
     .sync-lamp {
       width: 7px;
@@ -183,19 +186,47 @@
     .role-badge {
       font-size: 10px;
       font-weight: 800;
-      padding: 2px 6px;
-      border-radius: 999px;
+      padding: 1px 3px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 3px;
       margin-left: 2px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      transition: transform 0.15s ease;
+      border: none !important;
+      background: transparent !important;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      line-height: 1;
     }
-    .role-badge:active { transform: scale(0.92); }
-    .role-badge.admin { background: rgba(34, 197, 94, 0.25); color: #bef264; border-color: #bef264; }
-    .role-badge.spectator { background: rgba(56, 189, 248, 0.25); color: #7dd3fc; border-color: #7dd3fc; }
+    .role-badge:active { transform: scale(0.92); opacity: 0.8; }
+    .role-badge.admin { color: #bef264; }
+    .role-badge.spectator { color: #7dd3fc; }
+
+    /* 클릭 가능하다는 의미의 손가락 터치 탭 애니메이션 */
+    .icon-finger-tap {
+      display: inline-block;
+      transform-origin: bottom center;
+      animation: finger-tap-motion 1.2s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+    @keyframes finger-tap-motion {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-3px) scale(1.15); }
+      70% { transform: translateY(1px) scale(0.95); }
+    }
+
+    /* 좌우로 두리번거리며 움직이는 관람 눈 애니메이션 */
+    .icon-eye-scan {
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .anim-eye-pupil {
+      animation: eye-pupil-scan 2.2s infinite ease-in-out;
+    }
+    @keyframes eye-pupil-scan {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-2.4px); }
+      75% { transform: translateX(2.4px); }
+    }
 
     .club-title {
       font-size: 19px;
@@ -1059,7 +1090,7 @@
         </button>
       </div>
       
-      <p style="margin-top: 16px; font-size: 10.5px; color: #94a3b8; line-height: 1.4;">
+      <p style="margin-top: 16px; font-size: 11px; color: #94a3b8; line-height: 1.5; text-align: left; padding: 0 4px; word-break: keep-all;">
         ※ 일반회원 입장은 수정이나 변경이 안되고 실시간 경기현황 및 사진, 실시간 상황을 보실 수 있습니다.
       </p>
     </div>
@@ -1075,7 +1106,13 @@
         <span style="opacity: 0.45; font-size: 10px; margin: 0 1px;">|</span>
         <span id="userCountBadge" style="font-size: 10px; font-weight: 800; color: var(--accent); cursor: default;">user: 1명</span>
         <span style="opacity: 0.45; font-size: 10px; margin: 0 1px;">|</span>
-        <span id="roleIndicatorBadge" class="role-badge spectator" onclick="openRoleSwitchModal()" title="클릭하여 역할 변경">👀 참관 모드</span>
+        <span id="roleIndicatorBadge" class="role-badge spectator" onclick="openRoleSwitchModal()" title="클릭하여 역할 변경">
+          <svg class="icon-eye-scan" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle class="anim-eye-pupil" cx="12" cy="12" r="3" fill="currentColor"></circle>
+          </svg>
+          <span>참관 모드</span>
+        </span>
       </div>
       
       <h1 class="club-title">
@@ -1637,11 +1674,25 @@
       if (roleBadge) {
         if (isAdmin) {
           roleBadge.className = 'role-badge admin';
-          roleBadge.innerText = '⚡ 총무/경기이사 모드';
+          roleBadge.innerHTML = `
+            <svg class="icon-finger-tap" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+              <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+              <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.9-2.3L2.3 14a2 2 0 0 1 3-2.6L8 13"></path>
+            </svg>
+            <span>총무/경기이사 모드</span>
+          `;
           roleBadge.title = '클릭하여 역할 변경 (현재: 총무/경기이사)';
         } else {
           roleBadge.className = 'role-badge spectator';
-          roleBadge.innerText = '👀 참관 모드';
+          roleBadge.innerHTML = `
+            <svg class="icon-eye-scan" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle class="anim-eye-pupil" cx="12" cy="12" r="3" fill="currentColor"></circle>
+            </svg>
+            <span>참관 모드</span>
+          `;
           roleBadge.title = '클릭하여 역할 변경 (현재: 일반회원 참관)';
         }
       }
