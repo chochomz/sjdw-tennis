@@ -231,6 +231,32 @@
       100% { background-position: -150% 0; }
     }
 
+    .modal-shimmer-title {
+      font-size: 19px;
+      font-weight: 900;
+      margin-bottom: 5px;
+      letter-spacing: -0.5px;
+      background: linear-gradient(
+        110deg,
+        #0f172a 0%,
+        #0f172a 35%,
+        #f59e0b 45%,
+        #ffffff 50%,
+        #f59e0b 55%,
+        #0f172a 65%,
+        #0f172a 100%
+      );
+      background-size: 250% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: modal-light-sweep 5s infinite linear;
+      display: inline-block;
+    }
+    @keyframes modal-light-sweep {
+      0% { background-position: 150% 0; }
+      100% { background-position: -150% 0; }
+    }
+
     .theme-trigger-btn {
       background: none;
       border: none;
@@ -290,6 +316,98 @@
       10% { transform: translate(0, 0) scale(1.2); opacity: 1; }
       40% { transform: translate(45px, -35px) scale(0.6); opacity: 0; }
       100% { transform: translate(45px, -35px) scale(0); opacity: 0; }
+    }
+
+    /* [첫화면 모달: 선수가 라켓으로 공을 타격하는 정교한 애니메이션] */
+    .gate-anim-wrap {
+      position: relative;
+      width: 90px;
+      height: 80px;
+      margin: 0 auto 8px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+    }
+    .gate-player-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+    }
+    /* 선수 몸체: 타격 시 다이나믹한 체중 이동 */
+    .gate-player-body {
+      transform-origin: 32px 65px;
+      animation: player-swing-body 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    /* 스윙하는 팔과 라켓 */
+    .gate-player-arm {
+      transform-origin: 34px 34px;
+      animation: player-swing-arm 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    /* 타격 스파크 효과 */
+    .gate-hit-flash {
+      transform-origin: 58px 23px;
+      animation: player-hit-spark 2.4s infinite ease-out;
+    }
+    /* 노란 테니스공: 임팩트 후 시청자 정면으로 급격히 확대되며 소멸 */
+    .gate-anim-ball {
+      position: absolute;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 60%, #ca8a04 100%);
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.9);
+      animation: gate-player-ball-smash 2.4s infinite cubic-bezier(0.12, 0.82, 0.28, 1);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    @keyframes player-swing-body {
+      0% { transform: rotate(0deg) translateX(0); }
+      14% { transform: rotate(-5deg) translateX(-2px); } /* 백스윙 준비 */
+      22% { transform: rotate(8deg) translateX(3px); }   /* 임팩트 포워드 */
+      35% { transform: rotate(3deg) translateX(1px); }   /* 팔로우스루 */
+      55%, 100% { transform: rotate(0deg) translateX(0); }
+    }
+    @keyframes player-swing-arm {
+      0% { transform: rotate(-35deg); }
+      14% { transform: rotate(-55deg); } /* 라켓 뒤로 젖힘 (백스윙) */
+      22% { transform: rotate(32deg); }  /* 전방 임팩트 타격 순간 */
+      38% { transform: rotate(45deg); }  /* 강한 팔로우스루 */
+      55%, 100% { transform: rotate(-35deg); }
+    }
+    @keyframes player-hit-spark {
+      0%, 20% { opacity: 0; transform: scale(0.2); }
+      22% { opacity: 1; transform: scale(1.3); }
+      28% { opacity: 0; transform: scale(1.8); }
+      100% { opacity: 0; transform: scale(0.2); }
+    }
+    @keyframes gate-player-ball-smash {
+      0%, 18% {
+        /* 날아오는 공 (라켓 앞 타격 지점 대기) */
+        transform: translate(14px, -14px) scale(0.7);
+        opacity: 0.95;
+      }
+      22% {
+        /* 임팩트 순간 */
+        transform: translate(18px, -16px) scale(1.1);
+        opacity: 1;
+      }
+      45% {
+        /* 사용자 화면 앞으로 급격하게 커지며 대각선 날아감 */
+        transform: translate(45px, -45px) scale(3.8);
+        opacity: 0.85;
+      }
+      65% {
+        /* 거대해진 채로 시야 밖으로 사라짐 */
+        transform: translate(75px, -75px) scale(7.5);
+        opacity: 0;
+      }
+      100% {
+        transform: translate(75px, -75px) scale(7.5);
+        opacity: 0;
+      }
     }
 
     .event-title-wrapper {
@@ -826,14 +944,111 @@
   <!-- [최초 접속 역할 선택 게이트웨이 모달] -->
   <div id="roleGateModal" class="modal-backdrop show" style="z-index: 200; background: rgba(6, 78, 59, 0.92); backdrop-filter: blur(4px);">
     <div class="modal-box" style="text-align: center; padding: 26px 20px; border: 2px solid #bef264;">
-      <div style="font-size: 38px; margin-bottom: 6px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));">🎾</div>
-      <h2 style="font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 4px;">세종 대왕테니스 클럽</h2>
+      
+      <!-- [선수가 라켓으로 공을 쳐서 커지며 사라지는 정교한 아트워크] -->
+      <div class="gate-anim-wrap">
+        <svg class="gate-player-svg" viewBox="0 0 100 85" fill="none">
+          <!-- 코트 바닥 가이드 라인 (원근감) -->
+          <ellipse cx="44" cy="74" rx="36" ry="7" fill="rgba(21, 128, 61, 0.15)"/>
+          <line x1="16" y1="74" x2="72" y2="74" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="3 3"/>
+
+          <!-- 테니스 선수 실루엣 그룹 -->
+          <g class="gate-player-body">
+            <!-- 머리 (헤어밴드 포함) -->
+            <circle cx="33" cy="21" r="5" fill="#15803d"/>
+            <path d="M29 20 Q33 19 37 20" stroke="#bef264" stroke-width="1.4" stroke-linecap="round"/>
+
+            <!-- 상체 & 테니스 셔츠 -->
+            <path d="M30 26 L36 26 L38 41 L27 41 Z" fill="#15803d"/>
+            <path d="M30 26 L36 26 L37 34 L29 34 Z" fill="#16a34a"/>
+
+            <!-- 반대편 팔 (균형 유지) -->
+            <path d="M28 28 L20 33 L17 38" stroke="#15803d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 하체 (반바지 및 스텝 다리) -->
+            <path d="M27 41 L38 41 L39 49 L34 49 L33 44 L32 49 L26 49 Z" fill="#0f172a"/>
+            <!-- 앞다리 (구부린 무릎) -->
+            <path d="M36 49 L43 58 L45 71" stroke="#15803d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- 뒷다리 (도약하는 발) -->
+            <path d="M28 49 L23 59 L19 69" stroke="#15803d" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- 테니스화 -->
+            <ellipse cx="47" cy="71" rx="4" ry="2" fill="#ffffff" stroke="#15803d" stroke-width="1"/>
+            <ellipse cx="18" cy="69" rx="3.5" ry="1.8" fill="#ffffff" stroke="#15803d" stroke-width="1"/>
+          </g>
+
+          <!-- 스윙하는 팔 + 라켓 그룹 -->
+          <g class="gate-player-arm">
+            <!-- 오른쪽 어깨 -> 팔꿈치 -> 손목 -->
+            <path d="M35 28 L46 31 L53 27" stroke="#15803d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- 손목 아대 (손목 보호대) -->
+            <rect x="50" y="24" width="3.5" height="4.5" rx="1.2" fill="#bef264" transform="rotate(-15 50 24)"/>
+
+            <!-- [실제 테니스 라켓 구조 정밀 재현] -->
+            <!-- 1. 엔드 버트캡 (라켓 손잡이 끝부분) -->
+            <ellipse cx="53" cy="27" rx="1.2" ry="1.6" fill="#0f172a" transform="rotate(-28 53 27)"/>
+            
+            <!-- 2. 오버그립 손잡이 (인체공학적 8각 그립 + 테이핑 질감) -->
+            <line x1="53.5" y1="26.5" x2="63.5" y2="21" stroke="#f8fafc" stroke-width="2.6" stroke-linecap="round"/>
+            <line x1="56" y1="25.5" x2="57" y2="24" stroke="#94a3b8" stroke-width="0.8"/>
+            <line x1="59" y1="24" x2="60" y2="22.5" stroke="#94a3b8" stroke-width="0.8"/>
+            <line x1="62" y1="22.5" x2="63" y2="21" stroke="#94a3b8" stroke-width="0.8"/>
+
+            <!-- 3. 스로트 칼라 & V자형 넥(Throat) 구조 (현대 라켓의 공기역학 트윈 빔) -->
+            <path d="M63.5 21 L67 18.5 M63.5 21 L67.8 21.5" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
+            <!-- 스로트 내부 브릿지 (Bridge) -->
+            <path d="M67 18.5 Q69 19.8 67.8 21.5" stroke="#15803d" stroke-width="1.4" fill="none"/>
+
+            <!-- 4. 라켓 헤드 외곽 에어로 프레임 (슬림 타원형 에어로다이내믹 비율: 가로 7.2 x 세로 12) -->
+            <g transform="rotate(-26 75.5 17)">
+              <!-- 헤드 범퍼 가드 & 메인 프레임 외곽선 -->
+              <ellipse cx="75.5" cy="17" rx="7.2" ry="12" fill="none" stroke="#15803d" stroke-width="1.9"/>
+              <!-- 프레임 안쪽 이너 림 (깊이감 부여) -->
+              <ellipse cx="75.5" cy="17" rx="6.2" ry="10.8" fill="none" stroke="rgba(21, 128, 61, 0.45)" stroke-width="0.6"/>
+
+              <!-- 5. 촘촘한 정품 텐션 스트링 격자망 (바퀴 살 느낌 탈피) -->
+              <!-- 세로줄 (메인 스트링 7줄) -->
+              <line x1="71.5" y1="8" x2="71.5" y2="26" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="73" y1="6.8" x2="73" y2="27.2" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="74.5" y1="6.4" x2="74.5" y2="27.6" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="75.5" y1="6.3" x2="75.5" y2="27.7" stroke="#bef264" stroke-width="0.6" opacity="0.95"/>
+              <line x1="76.5" y1="6.4" x2="76.5" y2="27.6" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="78" y1="6.8" x2="78" y2="27.2" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="79.5" y1="8" x2="79.5" y2="26" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+
+              <!-- 가로줄 (크로스 스트링 9줄) -->
+              <line x1="70.5" y1="9" x2="80.5" y2="9" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="69.8" y1="11" x2="81.2" y2="11" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="69.5" y1="13" x2="81.5" y2="13" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="69.4" y1="15" x2="81.6" y2="15" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="69.3" y1="17" x2="81.7" y2="17" stroke="#bef264" stroke-width="0.6" opacity="0.95"/>
+              <line x1="69.4" y1="19" x2="81.6" y2="19" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="69.5" y1="21" x2="81.5" y2="21" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="70" y1="23" x2="81" y2="23" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+              <line x1="71" y1="25" x2="80" y2="25" stroke="#86efac" stroke-width="0.55" opacity="0.85"/>
+
+              <!-- 스위트스팟 댐프너(진동흡수 실리콘) -->
+              <circle cx="75.5" cy="24.5" r="0.9" fill="#ef4444"/>
+            </g>
+          </g>
+
+          <!-- 타격 순간 스파크(임팩트 효과) -->
+          <g class="gate-hit-flash">
+            <circle cx="75.5" cy="17" r="5" fill="#fef08a" opacity="0.65"/>
+            <path d="M75.5 10 L75.5 24 M68 17 L83 17 M70 12 L81 22 M70 22 L81 12" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/>
+          </g>
+        </svg>
+
+        <!-- 임팩트 후 사용자 정면으로 커지며 날아가는 테니스공 -->
+        <div class="gate-anim-ball"></div>
+      </div>
+
+      <h2 class="modal-shimmer-title">세종 대왕테니스 클럽</h2>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 22px;">접속하실 모드를 선택해 주세요.</p>
 
       <div style="display: flex; flex-direction: column; gap: 11px;">
         <!-- 총무 / 경기이사 버튼 -->
         <button onclick="selectUserRole('admin')" style="background: #15803d; color: #ffffff; border: none; padding: 13px 10px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.35); transition: transform 0.1s ease;">
-          <span style="font-size: 15px; font-weight: 900;">⚡ 총무 / 경기이사</span>
+          <span style="font-size: 15px; font-weight: 900; white-space: nowrap;">⚡ 총무/경기이사</span>
           <span style="font-size: 11px; font-weight: 700; opacity: 0.92; letter-spacing: -0.3px;">(선수, 대진, 결과, 저장, 사진등록, 공유)</span>
         </button>
 
@@ -845,7 +1060,7 @@
       </div>
       
       <p style="margin-top: 16px; font-size: 10.5px; color: #94a3b8; line-height: 1.4;">
-        ※ 일반회원 모드는 점수 변경이 차단되어 안심하고 실시간 경기 상황을 보실 수 있습니다.
+        ※ 일반회원 입장은 수정이나 변경이 안되고 실시간 경기현황 및 사진, 실시간 상황을 보실 수 있습니다.
       </p>
     </div>
   </div>
@@ -857,7 +1072,9 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         <span id="liveDateTime">시간 동기화 중...</span>
         <span id="syncLamp" class="sync-lamp" onclick="openSyncInfoModal()" title="클릭하여 동기화 상태 설명 보기"></span>
-        <span id="userCountBadge" style="font-size: 10px; font-weight: 800; color: var(--accent); margin-left: 2px; border-left: 1px solid rgba(255,255,255,0.25); padding-left: 5px; cursor: default;">user: 1명</span>
+        <span style="opacity: 0.45; font-size: 10px; margin: 0 1px;">|</span>
+        <span id="userCountBadge" style="font-size: 10px; font-weight: 800; color: var(--accent); cursor: default;">user: 1명</span>
+        <span style="opacity: 0.45; font-size: 10px; margin: 0 1px;">|</span>
         <span id="roleIndicatorBadge" class="role-badge spectator" onclick="openRoleSwitchModal()" title="클릭하여 역할 변경">👀 참관 모드</span>
       </div>
       
@@ -1473,6 +1690,11 @@
       // 6. 현재 렌더링된 인풋창들의 readonly 갱신
       document.querySelectorAll('.player-slot-input, .score-input').forEach(inp => {
         inp.readOnly = !isAdmin;
+        if (!isAdmin) {
+          inp.setAttribute('readonly', 'true');
+        } else {
+          inp.removeAttribute('readonly');
+        }
       });
     }
 
@@ -2823,6 +3045,9 @@
               }
 
               renderResults();
+              // 클라우드에서 새로운 경기 데이터가 들어와 화면을 다시 그릴 때도
+              // 현재 선택된 역할(총무 vs 일반회원)의 readonly 권한을 철저히 유지
+              applyRolePermissions(window.currentUserRole === 'admin');
               isRemoteUpdate = false;
             }
           } else {
