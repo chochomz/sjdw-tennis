@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#064e3b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>세종 대왕테니스 클럽</title>
+  <title>오늘의 테니스 모임</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1042,7 +1042,7 @@
         <div class="gate-anim-ball"></div>
       </div>
 
-      <h2 class="modal-shimmer-title">세종 대왕테니스 클럽</h2>
+      <h2 class="modal-shimmer-title">오늘의 테니스 모임</h2>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 22px;">접속하실 모드를 선택해 주세요.</p>
 
       <div style="display: flex; flex-direction: column; gap: 11px;">
@@ -1096,7 +1096,7 @@
             <circle class="anim-ball" cx="25" cy="15" r="4.5" fill="var(--accent)" />
           </svg>
         </button>
-        <span class="club-title-text">세종 대왕테니스 클럽</span>
+        <span class="club-title-text">오늘의 테니스 모임</span>
         <div class="header-btns-group">
           <button onclick="openRulesModal()" class="rules-trigger-btn" title="공식 규칙">📜 규칙</button>
           <button onclick="openManualModal()" class="manual-trigger-btn" title="이용 설명서">📖</button>
@@ -1259,7 +1259,7 @@
   <div id="manualModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📖 세종 대왕테니스 클럽 - 이용 가이드</h3>
+        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📖 오늘의 테니스 모임 - 이용 가이드</h3>
         <button onclick="closeManualModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
@@ -1299,7 +1299,7 @@
   <div id="rulesModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📜 세종 대왕테니스 클럽 5대 공식 규칙</h3>
+        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📜 오늘의 테니스 모임 5대 공식 규칙</h3>
         <button onclick="closeRulesModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
@@ -2510,7 +2510,7 @@
       const eventTitle = document.getElementById('eventTitle')?.value || window.state.eventTitle || '친선대회';
       
       let htmlArr = [];
-      htmlArr.push(`<div style="text-align:center; font-size:13px; margin-bottom:2px; color:#0f172a; font-weight:900;">🏆 세종 대왕테니스 클럽</div>`);
+      htmlArr.push(`<div style="text-align:center; font-size:13px; margin-bottom:2px; color:#0f172a; font-weight:900;">🏆 오늘의 테니스 모임</div>`);
       htmlArr.push(`<div style="text-align:center; font-size:10.5px; font-weight:bold; color:#475569; margin-bottom:4px; border-bottom:1.5px solid #cbd5e1; padding-bottom:3px;">- ${eventTitle} - 결과 종합</div>`);
 
       if (window.state.prizes) {
@@ -2829,7 +2829,7 @@
 
     function getKakaoText(customMsg = '') {
       const title = document.getElementById('eventTitle')?.value || window.state.eventTitle || '친선대회';
-      let txt = `세종 대왕테니스 클럽 - ${title}\n\n`;
+      let txt = `오늘의 테니스 모임 - ${title}\n\n`;
       
       if (window.state.prizes) {
         txt += `[오늘 대회 상품]\n${window.state.prizes}\n\n`;
