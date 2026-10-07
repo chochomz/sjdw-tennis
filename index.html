@@ -1184,15 +1184,15 @@
       <!-- [탭 1] 선수 입력 -->
       <section id="tab-players" class="tab-section">
         <div>
-          <div class="sub-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-            <select id="kdkVersionSelect" onchange="changeKdkVersion(this.value)" style="flex: 1.1; background: #f8fafc; border: 2px solid var(--primary); font-weight: 900; color:#0f172a; font-size: 11.5px; border-radius: 8px; padding: 5px 4px; outline: none; text-align: center;">
+          <div class="sub-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%;">
+            <select id="kdkVersionSelect" onchange="changeKdkVersion(this.value)" style="flex: 1.05; min-width: 0; background: #f8fafc; border: 1.5px solid var(--primary); font-weight: 900; color:#0f172a; font-size: 11px; border-radius: 8px; padding: 6px 2px; outline: none; text-align: center; letter-spacing: -0.4px;">
               <option value="v2010">KDK v2010</option>
-              <option value="v2010_4g">KDK v2010 (4게임)</option>
-              <option value="v2010_4g_ab" selected>KDK v2010 (A,B 그룹)</option>
+              <option value="v2010_4g">KDK (4게임)</option>
+              <option value="v2010_4g_ab" selected>KDK (A·B그룹)</option>
             </select>
 
             <!-- 단일 그룹용 기존 인원 선택 드롭다운 -->
-            <select id="playerCountSelect" onchange="changePlayerCount(this.value)" style="display: none; flex: 1; background: #f8fafc; border: 2px solid var(--primary); font-weight: 900; color:#0f172a; font-size: 12px; border-radius: 8px; padding: 5px 6px; outline: none; text-align: center;">
+            <select id="playerCountSelect" onchange="changePlayerCount(this.value)" style="display: none; flex: 1; min-width: 0; background: #f8fafc; border: 1.5px solid var(--primary); font-weight: 900; color:#0f172a; font-size: 11.5px; border-radius: 8px; padding: 6px 4px; outline: none; text-align: center; letter-spacing: -0.3px;">
               <option value="4">4명 (1코트)</option>
               <option value="5">5명</option>
               <option value="6">6명</option>
@@ -1205,22 +1205,22 @@
             </select>
 
             <!-- A, B 그룹 전용 독립 인원 및 게임수 선택 드롭다운 -->
-            <div id="abCountWrap" style="display: flex; flex: 1.4; gap: 4px; align-items: center;">
-              <select id="groupACountSelect" onchange="changeGroupCount('A', this.value)" style="flex: 1; background: #f0fdf4; border: 1.5px solid #15803d; border-radius: 8px; padding: 5px 2px; font-size: 11px; font-weight: 900; color: #14532d; outline: none;" title="A그룹 인원 및 게임수 설정">
-                <option value="4_3g">A: 4명(3G)</option>
-                <option value="4_4g">A: 4명(4G)</option>
-                <option value="5_4g" selected>A: 5명(4G)</option>
-                <option value="6_4g">A: 6명(4G)</option>
-                <option value="7_4g">A: 7명(4G)</option>
-                <option value="8_4g">A: 8명(4G)</option>
+            <div id="abCountWrap" style="display: flex; flex: 1.35; min-width: 0; gap: 3px; align-items: center;">
+              <select id="groupACountSelect" onchange="changeGroupCount('A', this.value)" style="flex: 1; min-width: 0; background: #f0fdf4; border: 1.5px solid #15803d; border-radius: 8px; padding: 6px 1px; font-size: 10.5px; font-weight: 900; color: #14532d; outline: none; text-align: center; letter-spacing: -0.5px;" title="A그룹 인원 및 게임수 설정">
+                <option value="4_3g">A:4명(3G)</option>
+                <option value="4_4g">A:4명(4G)</option>
+                <option value="5_4g" selected>A:5명(4G)</option>
+                <option value="6_4g">A:6명(4G)</option>
+                <option value="7_4g">A:7명(4G)</option>
+                <option value="8_4g">A:8명(4G)</option>
               </select>
-              <select id="groupBCountSelect" onchange="changeGroupCount('B', this.value)" style="flex: 1; background: #fff7ed; border: 1.5px solid #ea580c; border-radius: 8px; padding: 5px 2px; font-size: 11px; font-weight: 900; color: #9a3412; outline: none;" title="B그룹 인원 및 게임수 설정">
-                <option value="4_3g" selected>B: 4명(3G)</option>
-                <option value="4_4g">B: 4명(4G)</option>
-                <option value="5_4g">B: 5명(4G)</option>
-                <option value="6_4g">B: 6명(4G)</option>
-                <option value="7_4g">B: 7명(4G)</option>
-                <option value="8_4g">B: 8명(4G)</option>
+              <select id="groupBCountSelect" onchange="changeGroupCount('B', this.value)" style="flex: 1; min-width: 0; background: #fff7ed; border: 1.5px solid #ea580c; border-radius: 8px; padding: 6px 1px; font-size: 10.5px; font-weight: 900; color: #9a3412; outline: none; text-align: center; letter-spacing: -0.5px;" title="B그룹 인원 및 게임수 설정">
+                <option value="4_3g" selected>B:4명(3G)</option>
+                <option value="4_4g">B:4명(4G)</option>
+                <option value="5_4g">B:5명(4G)</option>
+                <option value="6_4g">B:6명(4G)</option>
+                <option value="7_4g">B:7명(4G)</option>
+                <option value="8_4g">B:8명(4G)</option>
               </select>
             </div>
           </div>
