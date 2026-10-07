@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#064e3b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>보화 테니스 클럽</title>
+  <title>세종 대왕테니스 클럽</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -137,24 +137,26 @@
       background: linear-gradient(to bottom, var(--hdr-from), var(--hdr-to));
       color: #ffffff;
       text-align: center;
-      padding: 12px;
+      padding: 10px 8px 12px 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       transition: all 0.3s ease;
     }
     .clock-badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      background: rgba(0, 0, 0, 0.35);
+      justify-content: center;
+      gap: 3px;
+      background: rgba(0, 0, 0, 0.38);
       color: var(--accent);
-      padding: 3px 8px;
+      padding: 3px 6px;
       border-radius: 9999px;
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
       white-space: nowrap;
       max-width: 100%;
+      letter-spacing: -0.3px;
       overflow: hidden;
     }
     .sync-lamp {
@@ -184,18 +186,20 @@
     }
 
     .role-badge {
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
-      padding: 1px 3px;
+      padding: 1px 2px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      margin-left: 2px;
+      gap: 2px;
+      margin-left: 0;
       border: none !important;
       background: transparent !important;
       transition: transform 0.15s ease, opacity 0.15s ease;
       line-height: 1;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .role-badge:active { transform: scale(0.92); opacity: 0.8; }
     .role-badge.admin { color: #bef264; }
@@ -1038,7 +1042,7 @@
         <div class="gate-anim-ball"></div>
       </div>
 
-      <h2 class="modal-shimmer-title">보화 테니스 클럽</h2>
+      <h2 class="modal-shimmer-title">세종 대왕테니스 클럽</h2>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 22px;">접속하실 모드를 선택해 주세요.</p>
 
       <div style="display: flex; flex-direction: column; gap: 11px;">
@@ -1063,14 +1067,14 @@
 
     <header class="app-header">
       <div class="clock-badge">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         <span id="liveDateTime">시간 동기화 중...</span>
         <span id="syncLamp" class="sync-lamp" onclick="openSyncInfoModal()" title="클릭하여 동기화 상태 설명 보기"></span>
-        <span style="opacity: 0.45; font-size: 10px; margin: 0 1px;">|</span>
-        <span id="userCountBadge" style="font-size: 10px; font-weight: 800; color: var(--accent); cursor: default;">user: 1명</span>
-        <span style="opacity: 0.45; font-size: 10px; margin: 0 1px;">|</span>
+        <span style="opacity: 0.35; font-size: 9px; margin: 0 0.5px;">|</span>
+        <span id="userCountBadge" style="font-size: 9.5px; font-weight: 800; color: var(--accent); cursor: default; white-space: nowrap;">1명</span>
+        <span style="opacity: 0.35; font-size: 9px; margin: 0 0.5px;">|</span>
         <span id="roleIndicatorBadge" class="role-badge spectator" onclick="openRoleSwitchModal()" title="클릭하여 역할 변경">
-          <svg class="icon-eye-scan" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="icon-eye-scan" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle class="anim-eye-pupil" cx="12" cy="12" r="3" fill="currentColor"></circle>
           </svg>
@@ -1092,7 +1096,7 @@
             <circle class="anim-ball" cx="25" cy="15" r="4.5" fill="var(--accent)" />
           </svg>
         </button>
-        <span class="club-title-text">보화 테니스 클럽</span>
+        <span class="club-title-text">세종 대왕테니스 클럽</span>
         <div class="header-btns-group">
           <button onclick="openRulesModal()" class="rules-trigger-btn" title="공식 규칙">📜 규칙</button>
           <button onclick="openManualModal()" class="manual-trigger-btn" title="이용 설명서">📖</button>
@@ -1255,7 +1259,7 @@
   <div id="manualModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📖 보화 테니스 클럽 - 이용 가이드</h3>
+        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📖 세종 대왕테니스 클럽 - 이용 가이드</h3>
         <button onclick="closeManualModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
@@ -1295,7 +1299,7 @@
   <div id="rulesModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📜 보화 테니스 클럽 5대 공식 규칙</h3>
+        <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📜 세종 대왕테니스 클럽 5대 공식 규칙</h3>
         <button onclick="closeRulesModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
@@ -1636,7 +1640,7 @@
         if (isAdmin) {
           roleBadge.className = 'role-badge admin';
           roleBadge.innerHTML = `
-            <svg class="icon-finger-tap" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="icon-finger-tap" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
               <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
               <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
@@ -1648,7 +1652,7 @@
         } else {
           roleBadge.className = 'role-badge spectator';
           roleBadge.innerHTML = `
-            <svg class="icon-eye-scan" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="icon-eye-scan" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
               <circle class="anim-eye-pupil" cx="12" cy="12" r="3" fill="currentColor"></circle>
             </svg>
@@ -2506,7 +2510,7 @@
       const eventTitle = document.getElementById('eventTitle')?.value || window.state.eventTitle || '친선대회';
       
       let htmlArr = [];
-      htmlArr.push(`<div style="text-align:center; font-size:13px; margin-bottom:2px; color:#0f172a; font-weight:900;">🏆 보화 테니스 클럽</div>`);
+      htmlArr.push(`<div style="text-align:center; font-size:13px; margin-bottom:2px; color:#0f172a; font-weight:900;">🏆 세종 대왕테니스 클럽</div>`);
       htmlArr.push(`<div style="text-align:center; font-size:10.5px; font-weight:bold; color:#475569; margin-bottom:4px; border-bottom:1.5px solid #cbd5e1; padding-bottom:3px;">- ${eventTitle} - 결과 종합</div>`);
 
       if (window.state.prizes) {
@@ -2825,7 +2829,7 @@
 
     function getKakaoText(customMsg = '') {
       const title = document.getElementById('eventTitle')?.value || window.state.eventTitle || '친선대회';
-      let txt = `보화 테니스 클럽 - ${title}\n\n`;
+      let txt = `세종 대왕테니스 클럽 - ${title}\n\n`;
       
       if (window.state.prizes) {
         txt += `[오늘 대회 상품]\n${window.state.prizes}\n\n`;
@@ -2996,7 +3000,7 @@
         });
         const badge = document.getElementById('userCountBadge');
         if (badge) {
-          badge.innerText = `user: ${Math.max(activeCount, 1)}명`;
+          badge.innerText = `${Math.max(activeCount, 1)}명`;
         }
       }, (err) => {
         console.warn("Presence snapshot error:", err);
