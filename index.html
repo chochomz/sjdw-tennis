@@ -924,19 +924,30 @@
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
     }
 
+    /* [보안 패드 모달 전용 모바일 최적화 스타일] */
+    .secret-modal-box {
+      width: 100%;
+      max-width: 295px;
+      padding: 20px 14px 16px 14px;
+      text-align: center;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35);
+    }
     .secret-pad-disk {
-      width: 140px;
-      height: 140px;
-      margin: 12px auto 16px auto;
+      width: 120px;
+      height: 120px;
+      margin: 10px auto 14px auto;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #f8fafc 0%, #e2e8f0 70%, #cbd5e1 100%);
       border: 3px solid #94a3b8;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12), inset 0 2px 6px rgba(255,255,255,0.8);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12), inset 0 2px 6px rgba(255,255,255,0.8);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 5px;
       cursor: pointer;
       user-select: none;
       -webkit-user-select: none;
@@ -950,11 +961,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 7px;
     }
     .secret-dot {
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       border: 1.5px solid #94a3b8;
       background: #ffffff;
@@ -966,6 +977,50 @@
       border-color: #15803d;
       box-shadow: 0 0 8px #22c55e;
       transform: scale(1.15);
+    }
+    .secret-input-wrapper {
+      display: flex;
+      align-items: stretch;
+      gap: 6px;
+      width: 100%;
+      max-width: 220px;
+      margin: 0 auto 12px auto;
+    }
+    .secret-decoy-input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      padding: 8px 4px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      background: #f8fafc;
+      color: #0f172a;
+      box-sizing: border-box;
+    }
+    .secret-decoy-input:focus {
+      border-color: #94a3b8;
+      background: #ffffff;
+    }
+    .secret-submit-btn {
+      flex-shrink: 0;
+      background: #1e293b;
+      color: #ffffff;
+      border: none;
+      padding: 0 13px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease;
+    }
+    .secret-submit-btn:active {
+      background: #0f172a;
     }
 
     .capture-overlay {
@@ -1014,7 +1069,7 @@
       padding: 10px 20px;
       border-radius: 9999px;
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-      z-index: 110;
+      z-index: 220;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s ease;
@@ -1122,15 +1177,15 @@
     </div>
   </div>
 
-  <!-- [비밀 보안 위장 인증 모달: 코드명을 입력하세요.] -->
+  <!-- [비밀 보안 위장 인증 모달: 코드명을 입력하세요 - 모바일 최적화 컴팩트 팝업] -->
   <div id="secretAuthModal" class="modal-backdrop" style="z-index: 210;">
-    <div class="modal-box" style="text-align: center; padding: 22px 18px; max-width: 330px; border: 1.5px solid #cbd5e1;">
-      <h3 style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 4px;">코드명을 입력하세요</h3>
-      <p style="font-size: 11px; color: #64748b; margin-bottom: 14px;">보안 패드에 5자리 코드를 입력하세요.</p>
+    <div class="secret-modal-box">
+      <h3 style="font-size: 15.5px; font-weight: 900; color: #1e293b; margin-bottom: 3px;">코드명을 입력하세요</h3>
+      <p style="font-size: 11px; color: #64748b; margin-bottom: 10px;">보안 패드에 5자리 코드를 입력하세요.</p>
 
       <!-- 둥근 판 + 5개 도트 위장 패드 -->
       <div id="secretAuthPad" class="secret-pad-disk" onclick="handleSecretPadTap()" title="보안 터치 패드">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         </svg>
@@ -1141,22 +1196,23 @@
           <div class="secret-dot" id="sdot-3"></div>
           <div class="secret-dot" id="sdot-4"></div>
         </div>
-        <span style="font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: -0.3px;">SECURITY DISK</span>
+        <span style="font-size: 8.5px; font-weight: 800; color: #64748b; letter-spacing: -0.3px;">SECURITY DISK</span>
       </div>
 
-      <!-- 위장 코드 입력창 -->
-      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+      <!-- 위장 코드 입력창 (모바일 초과 방지 min-width:0 및 max-width 적용) -->
+      <div class="secret-input-wrapper">
         <input 
           id="decoyCodeInput" 
           type="password" 
           maxlength="5" 
           placeholder="•••••" 
-          style="flex: 1; text-align: center; font-size: 16px; font-weight: 900; letter-spacing: 5px; padding: 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; outline: none; background: #f8fafc;"
+          class="secret-decoy-input"
+          onkeydown="if(event.key==='Enter') handleDecoyCodeSubmit();"
         />
-        <button onclick="handleDecoyCodeSubmit()" style="background: #1e293b; color: #ffffff; border: none; padding: 0 14px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer;">확인</button>
+        <button onclick="handleDecoyCodeSubmit()" class="secret-submit-btn">확인</button>
       </div>
 
-      <button onclick="closeSecretAuthModal()" style="width: 100%; padding: 8px; border-radius: 8px; background: #f1f5f9; color: #64748b; font-weight: 800; border: none; font-size: 12.5px; cursor: pointer;">취소하고 돌아가기</button>
+      <button onclick="closeSecretAuthModal()" style="width: 100%; max-width: 220px; margin: 0 auto; display: block; padding: 7px 0; border-radius: 8px; background: #f1f5f9; color: #64748b; font-weight: 800; border: none; font-size: 12px; cursor: pointer;">취소하고 돌아가기</button>
     </div>
   </div>
 
@@ -1745,7 +1801,6 @@
     // [권한 상태 변수] 기본값: spectator
     window.currentUserRole = 'spectator';
 
-
     const _AUTH_CFG = {
       _k: 0x05,    
       _w: 1600    
@@ -2241,7 +2296,7 @@
           html += `
             <div style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #cbd5e1; background: #0f172a;">
               <img src="${photoUrl}" onclick="showPhotoLightbox('${photoUrl}')" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" />
-              <button onclick="deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.88); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">✕</button>
+              <button onclick="deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.88); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">✕</button>
             </div>
           `;
         });
