@@ -920,6 +920,7 @@
         <select id="teamSelect" onchange="changeTeam(this.value)" class="sub-bar-select" style="flex: 0.95;">
           <option value="A" selected>A팀 (대표팀)</option>
           <option value="B">B팀 (대표팀)</option>
+          <option value="C">C팀 (대표팀)</option>
         </select>
 
         <select id="roundSelect" onchange="changeRound(this.value)" class="sub-bar-select" style="flex: 1.15; border-color: var(--accent); background: var(--primary-light); color: var(--primary);">
@@ -1011,6 +1012,7 @@
                 <option value="" disabled selected hidden>🔄 경기 재설정</option>
                 <option value="A">A팀-재설정</option>
                 <option value="B">B팀-재설정</option>
+                <option value="C">C팀-재설정</option>
                 <option value="all">전체-재설정</option>
               </select>
             </div>
@@ -1093,7 +1095,7 @@
       </div>
       <div style="font-size: 12px; color: #334155; line-height: 1.6; max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
         <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border-left: 4px solid var(--primary);">
-          <b>1. 👥 경기방식 & 출전팀 선택:</b> 상단에서 3복식/5복식 및 A팀/B팀을 선택합니다.
+          <b>1. 👥 경기방식 & 출전팀 선택:</b> 상단에서 3복식/5복식 및 A팀/B팀/C팀을 선택합니다.
         </div>
         <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border-left: 4px solid var(--primary);">
           <b>2. 📝 선수명단 등록:</b> 1조, 2조, 3조 각 조별 2명의 페어 선수와 후보 선수 2명을 입력합니다.
@@ -1449,7 +1451,8 @@
       photos: [],
       teams: {
         A: createDefaultTeamState('3doubles'),
-        B: createDefaultTeamState('3doubles')
+        B: createDefaultTeamState('3doubles'),
+        C: createDefaultTeamState('3doubles')
       }
     };
 
@@ -1457,11 +1460,12 @@
     if (!window.tourState.teams) {
       window.tourState.teams = {
         A: createDefaultTeamState(window.tourState.matchFormat || '3doubles'),
-        B: createDefaultTeamState(window.tourState.matchFormat || '3doubles')
+        B: createDefaultTeamState(window.tourState.matchFormat || '3doubles'),
+        C: createDefaultTeamState(window.tourState.matchFormat || '3doubles')
       };
     }
 
-    ['A', 'B'].forEach(tKey => {
+    ['A', 'B', 'C'].forEach(tKey => {
       if (!window.tourState.teams[tKey]) {
         window.tourState.teams[tKey] = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
       }
@@ -1602,7 +1606,7 @@
       saveTournamentState(false);
     };
 
-    async function saveTournamentState(immediate = false) {
+    async function saveTournamentState(immediate = false, targetedTeamKey = null) {
       if (window.currentUserRole !== 'admin') {
         try {
           sessionStorage.setItem(TOURNAMENT_GUEST_KEY, JSON.stringify(window.tourState));
@@ -1621,11 +1625,32 @@
         syncDebounceTimer = null;
       }
 
+      const teamKey = targetedTeamKey || window.tourState.currentTeam || 'A';
+
       const performSave = async () => {
         try {
           setSyncLamp('saving');
           const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-          await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)));
+          
+          if (teamKey === 'ALL') {
+            await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)), { merge: true });
+          } else {
+            const teamData = window.tourState.teams && window.tourState.teams[teamKey];
+            if (teamData) {
+              const updatePayload = {
+                tournamentTitle: window.tourState.tournamentTitle || '',
+                matchFormat: window.tourState.matchFormat || '3doubles',
+                [`teams.${teamKey}`]: JSON.parse(JSON.stringify(teamData))
+              };
+              try {
+                await updateDoc(docRef, updatePayload);
+              } catch(updateErr) {
+                await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)), { merge: true });
+              }
+            } else {
+              await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)), { merge: true });
+            }
+          }
           setSyncLamp('');
         } catch(e) {
           console.warn("Tournament cloud save error:", e);
@@ -1663,7 +1688,7 @@
       const targetPairCount = format === '5doubles' ? 5 : 3;
       const requiredPlayers = targetPairCount * 2;
 
-      ['A', 'B'].forEach(t => {
+      ['A', 'B', 'C'].forEach(t => {
         if (!window.tourState.teams[t]) {
           window.tourState.teams[t] = createDefaultTeamState(format);
         }
@@ -1690,15 +1715,14 @@
         });
       });
       autoSyncPairsToMatches();
-      saveTournamentState(true);
-      renderAllTabs();
+      saveTournamentState(true, 'ALL');
+      renderAllTabs(true);
       showToast(`경기 방식이 [${format === '5doubles' ? '5복식' : '3복식'}]으로 변경되었습니다.`);
     };
 
     window.changeTeam = function(team) {
       window.tourState.currentTeam = team;
-      saveTournamentState(false);
-      renderAllTabs();
+      renderAllTabs(true);
       showToast(`[${team}팀] 화면으로 전환되었습니다.`);
     };
 
@@ -1723,7 +1747,7 @@
       return teamData.rounds[rk];
     }
 
-    function renderEntryTab() {
+    function renderEntryTab(force = false) {
       const teamKey = window.tourState.currentTeam || 'A';
       const teamData = getCurrentTeamData();
       const format = window.tourState.matchFormat || '3doubles';
@@ -1735,66 +1759,66 @@
 
       const headerTitle = document.getElementById('entryHeaderTitle');
       if (headerTitle) {
-        headerTitle.innerText = `${teamKey === 'A' ? '🟢 A팀' : '🟠 B팀'} 선수명단`;
+        let teamEmoji = '🟢 A팀';
+        if (teamKey === 'B') teamEmoji = '🟠 B팀';
+        else if (teamKey === 'C') teamEmoji = '🔵 C팀';
+        headerTitle.innerText = `${teamEmoji} 선수명단`;
       }
 
       const grid = document.getElementById('entryInputsGrid');
-      if (grid) {
-        const activeEl = document.activeElement;
-        const activeId = activeEl ? activeEl.id : null;
+      if (!grid) return;
 
-        let html = '';
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && activeEl.classList && activeEl.classList.contains('entry-input');
+
+      // Concurrent safety: do not blow away DOM if active element is being typed
+      if (!force && isTyping) {
         for (let p = 1; p <= pairCount; p++) {
           const idx1 = (p - 1) * 2;
           const idx2 = (p - 1) * 2 + 1;
-          const val1 = teamData.players[idx1] || '';
-          const val2 = teamData.players[idx2] || '';
-
-          html += `
-            <div class="entry-pair-row">
-              <div class="entry-pair-badge">A-${p}조</div>
-              <div class="entry-pair-input-box">
-                <input 
-                  type="text" 
-                  id="entry-player-${idx1}" 
-                  value="${val1}" 
-                  maxlength="8" 
-                  placeholder="선수명" 
-                  oninput="handleEntryPlayerInput(${idx1}, this.value)" 
-                  class="entry-input"
-                  autocomplete="off"
-                />
-              </div>
-              <span class="entry-pair-sep">&</span>
-              <div class="entry-pair-input-box">
-                <input 
-                  type="text" 
-                  id="entry-player-${idx2}" 
-                  value="${val2}" 
-                  maxlength="8" 
-                  placeholder="선수명" 
-                  oninput="handleEntryPlayerInput(${idx2}, this.value)" 
-                  class="entry-input"
-                  autocomplete="off"
-                />
-              </div>
-            </div>
-          `;
+          const el1 = document.getElementById(`entry-player-${idx1}`);
+          const el2 = document.getElementById(`entry-player-${idx2}`);
+          if (el1 && el1 !== activeEl && el1.value !== (teamData.players[idx1] || '')) {
+            el1.value = teamData.players[idx1] || '';
+          }
+          if (el2 && el2 !== activeEl && el2.value !== (teamData.players[idx2] || '')) {
+            el2.value = teamData.players[idx2] || '';
+          }
         }
+        const res0 = document.getElementById('entry-reserve-0');
+        const res1 = document.getElementById('entry-reserve-1');
+        if (res0 && res0 !== activeEl && res0.value !== (teamData.reserves[0] || '')) {
+          res0.value = teamData.reserves[0] || '';
+        }
+        if (res1 && res1 !== activeEl && res1.value !== (teamData.reserves[1] || '')) {
+          res1.value = teamData.reserves[1] || '';
+        }
+        return;
+      }
 
-        const res1 = teamData.reserves[0] || '';
-        const res2 = teamData.reserves[1] || '';
+      const activeId = activeEl ? activeEl.id : null;
+      let teamBadgeBg = 'var(--primary)';
+      if (teamKey === 'B') teamBadgeBg = '#ea580c';
+      else if (teamKey === 'C') teamBadgeBg = '#2563eb';
+
+      let html = '';
+      for (let p = 1; p <= pairCount; p++) {
+        const idx1 = (p - 1) * 2;
+        const idx2 = (p - 1) * 2 + 1;
+        const val1 = teamData.players[idx1] || '';
+        const val2 = teamData.players[idx2] || '';
+
         html += `
-          <div class="entry-pair-row" style="background: #f1f5f9; border-color: #cbd5e1; margin-top: 8px;">
-            <div class="entry-pair-badge reserve-badge">후보</div>
+          <div class="entry-pair-row">
+            <div class="entry-pair-badge" style="background: ${teamBadgeBg};">${teamKey}-${p}조</div>
             <div class="entry-pair-input-box">
               <input 
                 type="text" 
-                id="entry-reserve-0" 
-                value="${res1}" 
+                id="entry-player-${idx1}" 
+                value="${val1}" 
                 maxlength="8" 
-                placeholder="후보1 선수명" 
-                oninput="handleReservePlayerInput(0, this.value)" 
+                placeholder="선수명" 
+                oninput="handleEntryPlayerInput(${idx1}, this.value)" 
                 class="entry-input"
                 autocomplete="off"
               />
@@ -1803,26 +1827,59 @@
             <div class="entry-pair-input-box">
               <input 
                 type="text" 
-                id="entry-reserve-1" 
-                value="${res2}" 
+                id="entry-player-${idx2}" 
+                value="${val2}" 
                 maxlength="8" 
-                placeholder="후보2 선수명" 
-                oninput="handleReservePlayerInput(1, this.value)" 
+                placeholder="선수명" 
+                oninput="handleEntryPlayerInput(${idx2}, this.value)" 
                 class="entry-input"
                 autocomplete="off"
               />
             </div>
           </div>
         `;
+      }
 
-        grid.innerHTML = html;
+      const res1Val = teamData.reserves[0] || '';
+      const res2Val = teamData.reserves[1] || '';
+      html += `
+        <div class="entry-pair-row" style="background: #f1f5f9; border-color: #cbd5e1; margin-top: 8px;">
+          <div class="entry-pair-badge reserve-badge">후보</div>
+          <div class="entry-pair-input-box">
+            <input 
+              type="text" 
+              id="entry-reserve-0" 
+              value="${res1Val}" 
+              maxlength="8" 
+              placeholder="후보1 선수명" 
+              oninput="handleReservePlayerInput(0, this.value)" 
+              class="entry-input"
+              autocomplete="off"
+            />
+          </div>
+          <span class="entry-pair-sep">&</span>
+          <div class="entry-pair-input-box">
+            <input 
+              type="text" 
+              id="entry-reserve-1" 
+              value="${res2Val}" 
+              maxlength="8" 
+              placeholder="후보2 선수명" 
+              oninput="handleReservePlayerInput(1, this.value)" 
+              class="entry-input"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+      `;
 
-        if (activeId) {
-          const restoredEl = document.getElementById(activeId);
-          if (restoredEl) {
-            restoredEl.focus();
-            try { restoredEl.setSelectionRange(restoredEl.value.length, restoredEl.value.length); } catch(e) {}
-          }
+      grid.innerHTML = html;
+
+      if (activeId) {
+        const restoredEl = document.getElementById(activeId);
+        if (restoredEl) {
+          restoredEl.focus();
+          try { restoredEl.setSelectionRange(restoredEl.value.length, restoredEl.value.length); } catch(e) {}
         }
       }
     }
@@ -1875,7 +1932,7 @@
       saveTournamentState(false);
     }
 
-    function renderMatchTab() {
+    function renderMatchTab(force = false) {
       const roundKey = window.tourState.currentRound || 'pre1';
       const teamKey = window.tourState.currentTeam || 'A';
       const teamData = getCurrentTeamData();
@@ -1892,14 +1949,18 @@
         });
       }
 
+      let badgeBgColor = 'var(--primary)';
+      if (teamKey === 'B') badgeBgColor = '#ea580c';
+      else if (teamKey === 'C') badgeBgColor = '#2563eb';
+
       const rBadge = document.getElementById('currentRoundBadge');
       if (rBadge) {
         rBadge.innerText = `[${teamKey}팀] ${ROUND_LABELS[roundKey] || roundKey}`;
-        rBadge.style.background = (teamKey === 'B') ? '#ea580c' : 'var(--primary)';
+        rBadge.style.background = badgeBgColor;
       }
 
       const oppInput = document.getElementById('opponentClubInput');
-      if (oppInput) {
+      if (oppInput && document.activeElement !== oppInput) {
         oppInput.value = roundData.opponentClub || '';
       }
 
@@ -1907,6 +1968,30 @@
       if (!container) return;
 
       const activeEl = document.activeElement;
+      const isTyping = activeEl && ((activeEl.classList && (activeEl.classList.contains('pair-score-input') || activeEl.classList.contains('pair-input-inline'))) || activeEl === oppInput);
+
+      // Concurrent safety: do not blow away DOM if active element is being typed
+      if (!force && isTyping) {
+        for (let p = 1; p <= pairCount; p++) {
+          const m = roundData.matches[p - 1];
+          if (!m) continue;
+          const scoreOurEl = document.getElementById(`score-our-${p-1}`);
+          const scoreOppEl = document.getElementById(`score-opp-${p-1}`);
+          const oppPlayerEl = document.getElementById(`opp-player-${p-1}`);
+          if (scoreOurEl && scoreOurEl !== activeEl && scoreOurEl.value !== (m.scoreOur || '')) {
+            scoreOurEl.value = m.scoreOur || '';
+          }
+          if (scoreOppEl && scoreOppEl !== activeEl && scoreOppEl.value !== (m.scoreOpp || '')) {
+            scoreOppEl.value = m.scoreOpp || '';
+          }
+          if (oppPlayerEl && oppPlayerEl !== activeEl && oppPlayerEl.value !== (m.oppP1 || '')) {
+            oppPlayerEl.value = m.oppP1 || '';
+          }
+        }
+        updateRoundBanner(roundData, pairCount);
+        return;
+      }
+
       const activeId = activeEl ? activeEl.id : null;
 
       let html = '';
@@ -1931,8 +2016,6 @@
         let cardClass = 'round-match-card';
         if (isWin) cardClass += ' win-card';
         else if (isLose) cardClass += ' lose-card';
-
-        let badgeBgColor = (teamKey === 'B') ? '#ea580c' : 'var(--primary)';
 
         html += `
           <div class="${cardClass}">
@@ -2170,10 +2253,10 @@
       switchTournamentTab('match');
     };
 
-    function renderAllTabs() {
+    function renderAllTabs(force = false) {
       const curTab = document.querySelector('.tab-btn.active')?.id.replace('tabBtn-', '') || 'entry';
-      renderEntryTab();
-      renderMatchTab();
+      renderEntryTab(force);
+      renderMatchTab(force);
       renderSummaryTab();
       switchTournamentTab(curTab);
     }
@@ -2359,13 +2442,16 @@
       let targetDesc = '';
       if (val === 'A') {
         targetTitle = 'A팀 경기 재설정';
-        targetDesc = 'A팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#15803d; margin-top:4px; display:inline-block;">(※ 선수 명단 및 B팀 경기 기록은 안전하게 유지됩니다)</span>';
+        targetDesc = 'A팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#15803d; margin-top:4px; display:inline-block;">(※ 선수 명단 및 B/C팀 경기 기록은 안전하게 유지됩니다)</span>';
       } else if (val === 'B') {
         targetTitle = 'B팀 경기 재설정';
-        targetDesc = 'B팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#ea580c; margin-top:4px; display:inline-block;">(※ 선수 명단 및 A팀 경기 기록은 안전하게 유지됩니다)</span>';
+        targetDesc = 'B팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#ea580c; margin-top:4px; display:inline-block;">(※ 선수 명단 및 A/C팀 경기 기록은 안전하게 유지됩니다)</span>';
+      } else if (val === 'C') {
+        targetTitle = 'C팀 경기 재설정';
+        targetDesc = 'C팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#2563eb; margin-top:4px; display:inline-block;">(※ 선수 명단 및 A/B팀 경기 기록은 안전하게 유지됩니다)</span>';
       } else if (val === 'all') {
         targetTitle = '전체 경기 재설정';
-        targetDesc = 'A팀과 B팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#be123c; margin-top:4px; display:inline-block;">(※ 양 팀 선수 명단은 안전하게 유지됩니다)</span>';
+        targetDesc = '모든 팀(A, B, C팀)의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#be123c; margin-top:4px; display:inline-block;">(※ 모든 팀 선수 명단은 안전하게 유지됩니다)</span>';
       } else {
         return;
       }
@@ -2400,13 +2486,22 @@
         updatePayload["teams.B.rounds"] = JSON.parse(JSON.stringify(window.tourState.teams.B.rounds));
       }
 
+      if (target === 'C' || target === 'all') {
+        if (!window.tourState.teams.C) {
+          window.tourState.teams.C = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
+        }
+        window.tourState.teams.C.rounds = generateFreshRoundsForTeam('C');
+        updatePayload["teams.C.rounds"] = JSON.parse(JSON.stringify(window.tourState.teams.C.rounds));
+      }
+
       if (window.currentUserRole !== 'admin') {
         try {
           sessionStorage.setItem(TOURNAMENT_GUEST_KEY, JSON.stringify(window.tourState));
         } catch(e) {}
-        renderAllTabs();
+        renderAllTabs(true);
         if (target === 'A') showToast('A팀 경기 결과가 재설정되었습니다. (개인모드)');
         else if (target === 'B') showToast('B팀 경기 결과가 재설정되었습니다. (개인모드)');
+        else if (target === 'C') showToast('C팀 경기 결과가 재설정되었습니다. (개인모드)');
         else showToast('전체 경기 결과가 재설정되었습니다. (개인모드)');
         return;
       }
@@ -2425,7 +2520,7 @@
           console.warn("Tournament updateDoc error, fallback to setDoc:", e);
           try {
             const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-            await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)));
+            await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)), { merge: true });
             setSyncLamp('');
           } catch(err2) {
             console.warn("Tournament setDoc fallback error:", err2);
@@ -2434,10 +2529,11 @@
         }
       }
 
-      renderAllTabs();
+      renderAllTabs(true);
 
       if (target === 'A') showToast('A팀 경기 결과가 새롭게 재설정되었습니다.');
       else if (target === 'B') showToast('B팀 경기 결과가 새롭게 재설정되었습니다.');
+      else if (target === 'C') showToast('C팀 경기 결과가 새롭게 재설정되었습니다.');
       else showToast('전체 경기 결과가 새롭게 재설정되었습니다.');
     }
     window.executeResetTournament = executeResetTournament;
@@ -2941,7 +3037,9 @@
 
     function initControlsFromState() {
       const titleInput = document.getElementById('tournamentTitle');
-      if (titleInput) titleInput.value = window.tourState.tournamentTitle || '';
+      if (titleInput && document.activeElement !== titleInput) {
+        titleInput.value = window.tourState.tournamentTitle || '';
+      }
       const mfSel = document.getElementById('matchFormatSelect');
       if (mfSel) mfSel.value = window.tourState.matchFormat || '3doubles';
       const tSel = document.getElementById('teamSelect');
@@ -2998,15 +3096,45 @@
               }
 
               isRemoteUpdate = true;
+              
+              // Preserve current device view selection so other members editing different teams don't jump this screen
+              const myCurrentTeam = window.tourState.currentTeam || 'A';
+              const myCurrentRound = window.tourState.currentRound || 'pre1';
+
               window.tourState = Object.assign(window.tourState, cloudData);
               if (!window.tourState.photos) window.tourState.photos = [];
+              if (!window.tourState.teams) window.tourState.teams = {};
+
+              window.tourState.currentTeam = myCurrentTeam;
+              window.tourState.currentRound = myCurrentRound;
+
+              ['A', 'B', 'C'].forEach(tKey => {
+                if (!window.tourState.teams[tKey]) {
+                  window.tourState.teams[tKey] = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
+                }
+              });
+
               initControlsFromState();
-              renderAllTabs();
+              
+              const activeEl = document.activeElement;
+              const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+              if (!isTyping) {
+                renderAllTabs();
+              } else {
+                renderSummaryTab();
+                const curTab = document.querySelector('.tab-btn.active')?.id.replace('tabBtn-', '') || 'entry';
+                if (curTab === 'match') {
+                  const roundData = getCurrentRoundData();
+                  const pairCount = (window.tourState.matchFormat === '5doubles') ? 5 : 3;
+                  updateRoundBanner(roundData, pairCount);
+                }
+              }
               isRemoteUpdate = false;
             }
           } else {
             if (window.currentUserRole === 'admin') {
-              saveTournamentState(true);
+              saveTournamentState(true, 'ALL');
             }
           }
         }, (err) => {
