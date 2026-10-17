@@ -1796,7 +1796,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, deleteDoc, updateDoc, runTransaction, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const CLUB_ID = "sejong-daewang-tennis-v1";
     const LOCAL_STORAGE_KEY = "sejong_daewang_tennis_state_v1";
@@ -1821,6 +1821,115 @@
     let cachedArchives = [];
     const ARCHIVE_PAGE_SIZE = 10;
     let cloudOriginalState = null;
+
+    // --- [동시 입력 동기화 큐 및 트랜잭션 관리] ---
+    let pendingPlayerUpdates = {};
+    let pendingMatchScoreUpdates = {};
+    let pendingTitleUpdate = null;
+    let playerSyncTimer = null;
+    let matchScoreSyncTimer = null;
+    let titleSyncTimer = null;
+
+    function queuePlayerSync(idx, name) {
+      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) return;
+      pendingPlayerUpdates[idx] = name;
+      if (playerSyncTimer) clearTimeout(playerSyncTimer);
+      playerSyncTimer = setTimeout(flushPlayerSync, 250);
+    }
+
+    async function flushPlayerSync() {
+      if (playerSyncTimer) { clearTimeout(playerSyncTimer); playerSyncTimer = null; }
+      const updates = { ...pendingPlayerUpdates };
+      pendingPlayerUpdates = {};
+      const indices = Object.keys(updates);
+      if (indices.length === 0 || !isCloudReady || !db) return;
+
+      try {
+        setSyncLamp('saving');
+        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(docRef);
+          if (!snap.exists()) return;
+          const cloudData = snap.data();
+          const pList = Array.isArray(cloudData.players) ? [...cloudData.players] : Array(window.state.count || 8).fill('');
+          indices.forEach(idx => {
+            const i = parseInt(idx, 10);
+            while (pList.length <= i) pList.push('');
+            pList[i] = updates[idx];
+          });
+          tx.update(docRef, { players: pList });
+        });
+        setSyncLamp('');
+      } catch (err) {
+        console.warn('Player sync transaction retry/fail:', err);
+        setSyncLamp('offline');
+      }
+    }
+
+    function queueMatchScoreSync(matchId, s1, s2) {
+      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) return;
+      pendingMatchScoreUpdates[matchId] = { s1: parseInt(s1, 10) || 0, s2: parseInt(s2, 10) || 0 };
+      if (matchScoreSyncTimer) clearTimeout(matchScoreSyncTimer);
+      matchScoreSyncTimer = setTimeout(flushMatchScoreSync, 250);
+    }
+
+    async function flushMatchScoreSync() {
+      if (matchScoreSyncTimer) { clearTimeout(matchScoreSyncTimer); matchScoreSyncTimer = null; }
+      const updates = { ...pendingMatchScoreUpdates };
+      pendingMatchScoreUpdates = {};
+      const matchIds = Object.keys(updates);
+      if (matchIds.length === 0 || !isCloudReady || !db) return;
+
+      try {
+        setSyncLamp('saving');
+        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(docRef);
+          if (!snap.exists()) return;
+          const cloudData = snap.data();
+          const mList = Array.isArray(cloudData.matches) ? JSON.parse(JSON.stringify(cloudData.matches)) : [];
+          matchIds.forEach(mIdStr => {
+            const mId = parseInt(mIdStr, 10);
+            const targetM = mList.find(m => m.id === mId);
+            if (targetM) {
+              targetM.s1 = updates[mIdStr].s1;
+              targetM.s2 = updates[mIdStr].s2;
+            }
+          });
+          tx.update(docRef, { matches: mList });
+        });
+        setSyncLamp('');
+      } catch (err) {
+        console.warn('Match score sync transaction retry/fail:', err);
+        setSyncLamp('offline');
+      }
+    }
+
+    function queueTitleSync(title) {
+      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) return;
+      pendingTitleUpdate = title;
+      if (titleSyncTimer) clearTimeout(titleSyncTimer);
+      titleSyncTimer = setTimeout(flushTitleSync, 350);
+    }
+
+    async function flushTitleSync() {
+      if (titleSyncTimer) { clearTimeout(titleSyncTimer); titleSyncTimer = null; }
+      if (pendingTitleUpdate === null || !isCloudReady || !db) return;
+      const titleToSave = pendingTitleUpdate;
+      pendingTitleUpdate = null;
+      try {
+        setSyncLamp('saving');
+        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
+        await updateDoc(docRef, { eventTitle: titleToSave });
+        setSyncLamp('');
+      } catch(e) {
+        console.warn('Title update error:', e);
+      }
+    }
+
+    async function flushAllPendingSync() {
+      await Promise.all([flushPlayerSync(), flushMatchScoreSync(), flushTitleSync()]);
+    }
 
     window.currentUserRole = 'spectator';
 
@@ -2087,169 +2196,13 @@
     window.openRulesModal = function() { document.getElementById('rulesModal').classList.add('show'); }
     window.closeRulesModal = function() { document.getElementById('rulesModal').classList.remove('show'); }
 
-
-    // --- [동시 입력 충돌 방지 & 트랜잭션 큐] ---
-    let pendingPlayerUpdates = {};
-    let playerSyncTimer = null;
-
-    function queuePlayerSync(idx, val) {
-      pendingPlayerUpdates[idx] = val;
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) {
-        saveState(false);
-        return;
-      }
-      setSyncLamp('saving');
-      if (playerSyncTimer) clearTimeout(playerSyncTimer);
-      playerSyncTimer = setTimeout(() => {
-        flushPendingPlayerSync();
-      }, 400);
-    }
-
-    async function flushPendingPlayerSync() {
-      if (playerSyncTimer) {
-        clearTimeout(playerSyncTimer);
-        playerSyncTimer = null;
-      }
-      const toSync = { ...pendingPlayerUpdates };
-      const indices = Object.keys(toSync);
-      if (indices.length === 0) return;
-
-      indices.forEach(k => delete pendingPlayerUpdates[k]);
-
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) {
-        return;
-      }
-
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-        await runTransaction(db, async (transaction) => {
-          const docSnap = await transaction.get(docRef);
-          if (!docSnap.exists()) {
-            transaction.set(docRef, JSON.parse(JSON.stringify(window.state)));
-            return;
-          }
-          const data = docSnap.data();
-          const currentPlayers = Array.isArray(data.players) ? [...data.players] : [];
-          for (const [idxStr, val] of Object.entries(toSync)) {
-            const pIdx = parseInt(idxStr, 10);
-            while (currentPlayers.length <= pIdx) currentPlayers.push('');
-            currentPlayers[pIdx] = val;
-          }
-          transaction.update(docRef, { players: currentPlayers });
-        });
-        setSyncLamp('');
-      } catch (e) {
-        console.warn('Player sync transaction error:', e);
-        Object.assign(pendingPlayerUpdates, toSync);
-        setSyncLamp('offline');
-      }
-    }
-
-    window.handlePlayerBlur = function(idx) {
-      flushPendingPlayerSync();
-    };
-
-    let pendingScoreUpdates = {};
-    let scoreSyncTimer = null;
-
-    function queueMatchScoreSync(matchId, teamSide, num, matchIndex) {
-      if (!pendingScoreUpdates[matchId]) {
-        const m = window.state.matches.find(item => item.id === matchId);
-        pendingScoreUpdates[matchId] = {
-          matchId: matchId,
-          matchIndex: matchIndex,
-          s1: m ? m.s1 : 0,
-          s2: m ? m.s2 : 0
-        };
-      }
-      if (teamSide === 1) pendingScoreUpdates[matchId].s1 = num;
-      if (teamSide === 2) pendingScoreUpdates[matchId].s2 = num;
-
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) {
-        saveState(false);
-        return;
-      }
-
-      setSyncLamp('saving');
-      if (scoreSyncTimer) clearTimeout(scoreSyncTimer);
-      scoreSyncTimer = setTimeout(() => {
-        flushPendingScoreSync();
-      }, 400);
-    }
-
-    async function flushPendingScoreSync() {
-      if (scoreSyncTimer) {
-        clearTimeout(scoreSyncTimer);
-        scoreSyncTimer = null;
-      }
-      const toSync = { ...pendingScoreUpdates };
-      const matchIds = Object.keys(toSync);
-      if (matchIds.length === 0) return;
-
-      matchIds.forEach(id => delete pendingScoreUpdates[id]);
-
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) {
-        return;
-      }
-
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-        await runTransaction(db, async (transaction) => {
-          const docSnap = await transaction.get(docRef);
-          if (!docSnap.exists()) {
-            transaction.set(docRef, JSON.parse(JSON.stringify(window.state)));
-            return;
-          }
-          const data = docSnap.data();
-          const currentMatches = Array.isArray(data.matches) ? [...data.matches] : [];
-          for (const [mIdStr, scoreObj] of Object.entries(toSync)) {
-            const mId = parseInt(mIdStr, 10);
-            const targetMatch = currentMatches.find(item => item.id === mId);
-            if (targetMatch) {
-              targetMatch.s1 = scoreObj.s1;
-              targetMatch.s2 = scoreObj.s2;
-            }
-          }
-          transaction.update(docRef, { matches: currentMatches });
-        });
-        setSyncLamp('');
-      } catch (e) {
-        console.warn('Score sync transaction error:', e);
-        Object.assign(pendingScoreUpdates, toSync);
-        setSyncLamp('offline');
-      }
-    }
-
-    window.handleScoreBlur = function() {
-      flushPendingScoreSync();
-    };
-
-    let titleSyncTimer = null;
-    function queueTitleSync(val) {
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) {
-        saveState(false);
-        return;
-      }
-      setSyncLamp('saving');
-      if (titleSyncTimer) clearTimeout(titleSyncTimer);
-      titleSyncTimer = setTimeout(async () => {
-        try {
-          const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-          await updateDoc(docRef, { eventTitle: val });
-          setSyncLamp('');
-        } catch (e) {
-          console.warn('Title update error:', e);
-          setSyncLamp('offline');
-        }
-      }, 400);
-    }
-
     window.handleEventTitleInput = function(inputEl) {
       const val = inputEl.value;
       window.state.eventTitle = val;
-      queueTitleSync(val);
+      if (window.currentUserRole === 'admin') {
+        queueTitleSync(val);
+      }
+      saveState(false);
     }
 
     window.switchTab = function(tabKey) {
@@ -2380,7 +2333,6 @@
                 autocomplete="off"
                 enterkeyhint="next"
                 oninput="updatePlayerName(${idx}, this.value)"
-                onblur="handlePlayerBlur(${idx})"
                 onkeydown="handlePlayerEnter(event, ${idx})"
                 class="player-slot-input"
               />
@@ -2411,7 +2363,6 @@
                 autocomplete="off"
                 enterkeyhint="next"
                 oninput="updatePlayerName(${idx}, this.value)"
-                onblur="handlePlayerBlur(${idx})"
                 onkeydown="handlePlayerEnter(event, ${idx})"
                 class="player-slot-input"
               />
@@ -2440,7 +2391,6 @@
                 autocomplete="off"
                 enterkeyhint="next"
                 oninput="updatePlayerName(${idx}, this.value)"
-                onblur="handlePlayerBlur(${idx})"
                 onkeydown="handlePlayerEnter(event, ${idx})"
                 class="player-slot-input"
               />
@@ -2455,7 +2405,6 @@
     window.handlePlayerEnter = function(e, currentIdx) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        flushPendingPlayerSync();
         const nextInput = document.getElementById(`player-input-${currentIdx + 1}`);
         if (nextInput) nextInput.focus();
         else e.target.blur();
@@ -2464,7 +2413,10 @@
 
     window.updatePlayerName = function(idx, val) {
       window.state.players[idx] = val;
-      queuePlayerSync(idx, val);
+      if (window.currentUserRole === 'admin') {
+        queuePlayerSync(idx, val);
+      }
+      saveState(false);
       if (window.state.currentTab === 'matches') renderMatches();
       if (window.state.currentTab === 'results') renderResults();
     }
@@ -2591,7 +2543,30 @@
           };
 
           window.state.photos.unshift(newPhoto);
-          if (window.state.photos.length > 15) window.state.photos.pop();
+          if (window.state.photos.length > 15) window.state.photos = window.state.photos.slice(0, 15);
+
+          if (window.currentUserRole === 'admin' && isCloudReady && db) {
+            (async () => {
+              try {
+                setSyncLamp('saving');
+                const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
+                await runTransaction(db, async (tx) => {
+                  const snap = await tx.get(docRef);
+                  let curPhotos = [];
+                  if (snap.exists() && Array.isArray(snap.data().photos)) {
+                    curPhotos = snap.data().photos;
+                  }
+                  curPhotos.unshift(newPhoto);
+                  if (curPhotos.length > 15) curPhotos = curPhotos.slice(0, 15);
+                  tx.update(docRef, { photos: curPhotos });
+                });
+                setSyncLamp('');
+              } catch(err) {
+                console.warn('Photo cloud transaction error:', err);
+                setSyncLamp('offline');
+              }
+            })();
+          }
 
           saveState(true);
           renderPhotosGrid();
@@ -2604,12 +2579,34 @@
     };
 
     window.deletePhoto = function(photoId) {
-      openConfirmModal('사진 삭제', '이 사진을 목록에서 삭제하시겠습니까?', () => {
+      openConfirmModal('사진 삭제', '이 사진을 목록에서 삭제하시겠습니까?', async () => {
         if (!window.state.photos) return;
         window.state.photos = window.state.photos.filter((p, idx) => {
           if (typeof p === 'string') return ('old_' + idx) !== photoId;
           return p.id !== photoId;
         });
+
+        if (window.currentUserRole === 'admin' && isCloudReady && db) {
+          try {
+            setSyncLamp('saving');
+            const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
+            await runTransaction(db, async (tx) => {
+              const snap = await tx.get(docRef);
+              if (snap.exists() && Array.isArray(snap.data().photos)) {
+                let curPhotos = snap.data().photos.filter((p, idx) => {
+                  if (typeof p === 'string') return ('old_' + idx) !== photoId;
+                  return p.id !== photoId;
+                });
+                tx.update(docRef, { photos: curPhotos });
+              }
+            });
+            setSyncLamp('');
+          } catch(err) {
+            console.warn('Photo delete transaction error:', err);
+            setSyncLamp('offline');
+          }
+        }
+
         saveState(true);
         renderPhotosGrid();
         showToast('사진이 삭제되었습니다.');
@@ -2633,25 +2630,12 @@
     window.closePrizesModal = function() {
       document.getElementById('prizesModal').classList.remove('show');
     }
-    window.saveEventPrizes = async function() {
+    window.saveEventPrizes = function() {
       const area = document.getElementById('eventPrizesInput');
       if (area) {
-        const val = area.value.trim();
-        window.state.prizes = val;
-        closePrizesModal();
-        if (window.currentUserRole === 'admin' && isCloudReady && db) {
-          try {
-            setSyncLamp('saving');
-            const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-            await updateDoc(docRef, { prizes: val });
-            setSyncLamp('');
-            showToast('오늘 대회 상품 내역이 저장되었습니다.');
-            return;
-          } catch (e) {
-            console.warn('Prizes update error:', e);
-          }
-        }
+        window.state.prizes = area.value.trim();
         saveState(true);
+        closePrizesModal();
         showToast('오늘 대회 상품 내역이 저장되었습니다.');
       }
     }
@@ -2939,46 +2923,8 @@
       const container = document.getElementById('matchesCompactList');
       if (!container) return;
       
-
-    function updateNonActiveScoreInputs(activeEl) {
-      if (!window.state.matches) return;
-      const isAbMode = (window.state.kdkVersion === 'v2010_ab');
-      const cfgA = isAbMode ? parseGroupCfg(window.state.groupAConfig || '5_4g') : null;
-      const getPlayerLabel = (idx) => {
-        if (!isAbMode) return `${idx + 1}-`;
-        return (idx < cfgA.count) ? `A${idx + 1}-` : `B${idx - cfgA.count + 1}-`;
-      };
-      const renderMatchTeam = (team) => {
-        const p1Name = window.state.players[team[0]] || (`선수${team[0] + 1}`);
-        const p2Name = window.state.players[team[1]] || (`선수${team[1] + 1}`);
-        const isGroupB = isAbMode && team[0] >= cfgA.count;
-        return `
-          <div class="team-player-row"><span class="pnum-tag ${isGroupB ? 'tag-group-b' : ''}">${getPlayerLabel(team[0])}</span><span>${p1Name}</span></div>
-          <div class="team-player-row team-player-divider"><span class="pnum-tag ${isGroupB ? 'tag-group-b' : ''}">${getPlayerLabel(team[1])}</span><span>${p2Name}</span></div>
-        `;
-      };
-
-      window.state.matches.forEach((m, idx) => {
-        const s1El = document.getElementById(`score-${idx}-1`);
-        const s2El = document.getElementById(`score-${idx}-2`);
-        if (s1El && s1El !== activeEl) {
-          const v1 = (m.s1 > 0 || m.s2 > 0) ? String(m.s1) : '';
-          if (s1El.value !== v1) s1El.value = v1;
-        }
-        if (s2El && s2El !== activeEl) {
-          const v2 = (m.s1 > 0 || m.s2 > 0) ? String(m.s2) : '';
-          if (s2El.value !== v2) s2El.value = v2;
-        }
-        const t1Box = document.getElementById(`team1-box-${idx}`);
-        const t2Box = document.getElementById(`team2-box-${idx}`);
-        if (t1Box) t1Box.innerHTML = renderMatchTeam(m.t1);
-        if (t2Box) t2Box.innerHTML = renderMatchTeam(m.t2);
-      });
-    }
-
       const activeEl = document.activeElement;
       if (activeEl && activeEl.classList.contains('score-input')) {
-        updateNonActiveScoreInputs(activeEl);
         updateAllMatchCardStates();
         updateStats();
         return;
@@ -3054,7 +3000,6 @@
                   value="${val1}" 
                   onfocus="handleScoreFocus(this)"
                   oninput="handleNumericScoreChange(${m.id}, 1, this.value, ${matchIndex})" 
-                  onblur="handleScoreBlur()" 
                   class="score-input"
                   autocomplete="off"
                 />
@@ -3069,7 +3014,6 @@
                   value="${val2}" 
                   onfocus="handleScoreFocus(this)"
                   oninput="handleNumericScoreChange(${m.id}, 2, this.value, ${matchIndex})" 
-                  onblur="handleScoreBlur()" 
                   class="score-input"
                   autocomplete="off"
                 />
@@ -3141,7 +3085,10 @@
         }
       }
 
-      queueMatchScoreSync(matchId, teamSide, num, matchIndex);
+      if (window.currentUserRole === 'admin') {
+        queueMatchScoreSync(m.id, m.s1, m.s2);
+      }
+      saveState(false);
       updateStats();
     };
 
@@ -3464,11 +3411,12 @@
     }
 
     async function saveCurrentEvent() {
+      await flushAllPendingSync();
       const titleInput = document.getElementById('eventTitle');
       const title = (titleInput && titleInput.value.trim()) || (window.state.eventTitle && window.state.eventTitle.trim()) || '대회';
       const now = new Date();
       const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-      const docId = String(Date.now());
+      const docId = String(Date.now()) + '_' + Math.random().toString(36).substring(2, 6);
       
       const newArchive = {
         id: docId,
@@ -3793,20 +3741,6 @@
         return;
       }
 
-      // 대기 중인 부분 동기화 타이머가 있으면 로컬 state에 반영
-      if (playerSyncTimer) {
-        clearTimeout(playerSyncTimer);
-        playerSyncTimer = null;
-      }
-      if (scoreSyncTimer) {
-        clearTimeout(scoreSyncTimer);
-        scoreSyncTimer = null;
-      }
-      if (titleSyncTimer) {
-        clearTimeout(titleSyncTimer);
-        titleSyncTimer = null;
-      }
-
       try {
         const titleInput = document.getElementById('eventTitle');
         if (titleInput) window.state.eventTitle = titleInput.value;
@@ -3909,96 +3843,63 @@
               }
 
               isRemoteUpdate = true;
-
-              // 테마 및 기본 설정 동기화
-              if (cloudData.theme && cloudData.theme !== window.state.theme) {
-                window.state.theme = cloudData.theme;
-                applyTheme(cloudData.theme);
-              }
-              if (cloudData.kdkVersion !== undefined) window.state.kdkVersion = cloudData.kdkVersion;
-              if (cloudData.count !== undefined) window.state.count = cloudData.count;
-              if (cloudData.groupAConfig !== undefined) window.state.groupAConfig = cloudData.groupAConfig;
-              if (cloudData.groupBConfig !== undefined) window.state.groupBConfig = cloudData.groupBConfig;
-              if (cloudData.photos !== undefined) window.state.photos = cloudData.photos || [];
-              if (cloudData.prizes !== undefined) {
-                window.state.prizes = cloudData.prizes;
-                const prizesEl = document.getElementById('eventPrizesInput');
-                if (prizesEl && prizesEl !== document.activeElement) prizesEl.value = cloudData.prizes;
-              }
-
-              // 대회명 (현재 사용자가 입력 중인 경우 덮어쓰지 않음)
-              const titleInput = document.getElementById('eventTitle');
-              if (titleInput && titleInput !== document.activeElement && cloudData.eventTitle !== undefined) {
-                titleInput.value = cloudData.eventTitle;
-                window.state.eventTitle = cloudData.eventTitle;
-              } else if (titleInput === document.activeElement) {
-                // 사용자가 입력 중인 로컬 상태 유지
-              } else if (cloudData.eventTitle !== undefined) {
-                window.state.eventTitle = cloudData.eventTitle;
-              }
-
-              // 선수 명단 병합 (동시 입력 중인 특정 칸은 보호하고 다른 관리자의 입력만 반영)
-              if (Array.isArray(cloudData.players)) {
-                const activeEl = document.activeElement;
-                let activePlayerIdx = -1;
-                if (activeEl && activeEl.id && activeEl.id.startsWith('player-input-')) {
-                  activePlayerIdx = parseInt(activeEl.id.replace('player-input-', ''), 10);
-                }
-
-                while (window.state.players.length < cloudData.players.length) {
-                  window.state.players.push('');
-                }
-                cloudData.players.forEach((cloudName, idx) => {
-                  // 현재 본인이 타이핑 중이거나 아직 클라우드로 전송 대기 중인 번호는 덮어쓰지 않음
-                  if (idx === activePlayerIdx || pendingPlayerUpdates[idx] !== undefined) {
-                    return;
-                  }
-                  window.state.players[idx] = cloudName || '';
-                });
-              }
-
-              // 경기 대진 및 점수 병합 (현재 본인이 입력 중인 경기 점수는 보호)
-              if (Array.isArray(cloudData.matches)) {
-                const activeEl = document.activeElement;
-                let activeScoreMatchIdx = -1;
-                if (activeEl && activeEl.id && activeEl.id.startsWith('score-')) {
-                  const parts = activeEl.id.split('-');
-                  if (parts.length === 3) activeScoreMatchIdx = parseInt(parts[1], 10);
-                }
-
-                cloudData.matches.forEach((cm, idx) => {
-                  if (!window.state.matches[idx]) {
-                    window.state.matches[idx] = JSON.parse(JSON.stringify(cm));
-                    return;
-                  }
-                  const localMatch = window.state.matches[idx];
-                  const isPending = (pendingScoreUpdates[localMatch.id] !== undefined);
-                  const isActive = (idx === activeScoreMatchIdx);
-
-                  // 대진 구조 정보 동기화
-                  localMatch.id = cm.id;
-                  localMatch.court = cm.court;
-                  localMatch.r = cm.r;
-                  localMatch.group = cm.group;
-                  localMatch.t1 = cm.t1;
-                  localMatch.t2 = cm.t2;
-                  localMatch.rest = cm.rest;
-
-                  // 점수는 본인이 수정 중이 아닌 경우에만 클라우드 점수로 업데이트
-                  if (!isActive && !isPending) {
-                    localMatch.s1 = cm.s1 || 0;
-                    localMatch.s2 = cm.s2 || 0;
-                  }
-                });
-              }
-
-              renderPlayerInputs(false);
-              
               const activeEl = document.activeElement;
+              const activeId = activeEl ? activeEl.id : null;
+
+              // Partial merge preserving locally focused inputs
+              if (cloudData.eventTitle !== undefined && activeId !== 'eventTitle') {
+                window.state.eventTitle = cloudData.eventTitle;
+                const titleInput = document.getElementById('eventTitle');
+                if (titleInput) titleInput.value = cloudData.eventTitle || '';
+              }
+
+              if (Array.isArray(cloudData.players)) {
+                if (!window.state.players) window.state.players = [];
+                cloudData.players.forEach((p, idx) => {
+                  const inputId = `player-input-${idx}`;
+                  if (activeId !== inputId) {
+                    window.state.players[idx] = p;
+                    const inp = document.getElementById(inputId);
+                    if (inp && inp.value !== p) inp.value = p;
+                  }
+                });
+              }
+
+              if (Array.isArray(cloudData.matches)) {
+                if (!window.state.matches) window.state.matches = [];
+                cloudData.matches.forEach((cm) => {
+                  const localM = window.state.matches.find(m => m.id === cm.id);
+                  if (localM) {
+                    const matchIndex = window.state.matches.indexOf(localM);
+                    if (activeId !== `score-${matchIndex}-1`) localM.s1 = cm.s1;
+                    if (activeId !== `score-${matchIndex}-2`) localM.s2 = cm.s2;
+                  }
+                });
+              }
+
+              if (Array.isArray(cloudData.photos)) {
+                window.state.photos = cloudData.photos;
+                const photoModal = document.getElementById('photosModal');
+                if (photoModal && photoModal.classList.contains('show')) {
+                  renderPhotosGrid();
+                }
+              }
+
+              if (cloudData.kdkVersion) window.state.kdkVersion = cloudData.kdkVersion;
+              if (cloudData.count) window.state.count = cloudData.count;
+              if (cloudData.groupAConfig) window.state.groupAConfig = cloudData.groupAConfig;
+              if (cloudData.groupBConfig) window.state.groupBConfig = cloudData.groupBConfig;
+              if (cloudData.prizes !== undefined) window.state.prizes = cloudData.prizes;
+
+              applyTheme(cloudData.theme || window.state.theme || 'summer');
+
+              if (!activeEl || !activeEl.classList.contains('player-slot-input')) {
+                renderPlayerInputs(false);
+              }
+              
               if (!activeEl || !activeEl.classList.contains('score-input')) {
                 renderMatches();
               } else {
-                updateNonActiveScoreInputs(activeEl);
                 updateAllMatchCardStates();
                 updateStats();
               }
