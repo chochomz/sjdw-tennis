@@ -960,7 +960,7 @@
       <!-- [탭 3] 경기결과 (A팀 또는 B팀 선택에 맞게 동적 연동) -->
       <section id="tab-summary" class="tab-section hidden">
         <div>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px;">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 8px;">
             <button onclick="saveTournamentEvent()" class="btn-outline-mini-compact" title="현재 대회 전적 저장">
               💾 대회저장
             </button>
@@ -970,6 +970,20 @@
             <button onclick="openPhotosModal()" class="btn-outline-mini-compact" style="border-color: #38bdf8; color: #0284c7; background: #f0f9ff;" title="사진 저장 및 보기">
               📷 사진저장/보기
             </button>
+            <div style="position: relative; width: 100%; display: flex;">
+              <select 
+                id="resetTournamentSelect" 
+                onchange="handleTournamentResetSelect(this.value)" 
+                class="btn-outline-mini-compact" 
+                style="width: 100%; border-color: #f43f5e; color: #be123c; background: #fff1f2; text-align: center; text-align-last: center; cursor: pointer; outline: none; -webkit-appearance: none; appearance: none; padding: 6px 1px;"
+                title="경기 결과 재설정"
+              >
+                <option value="" disabled selected hidden>🔄 경기 재설정</option>
+                <option value="A">A팀-재설정</option>
+                <option value="B">B팀-재설정</option>
+                <option value="all">전체-재설정</option>
+              </select>
+            </div>
           </div>
 
           <div class="group-section-header">
@@ -1169,7 +1183,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const CLUB_ID = "sejong-daewang-tennis-v1";
     const TOURNAMENT_STORAGE_KEY = 'sejong_tournament_entry_state_v1';
@@ -2109,6 +2123,107 @@
     window.closeCaptureView = function() {
       document.getElementById('captureOverlay').classList.remove('show');
     };
+
+
+    function generateFreshRoundsForTeam(teamKey) {
+      const format = window.tourState.matchFormat || '3doubles';
+      const pairCount = format === '5doubles' ? 5 : 3;
+      const teamData = window.tourState.teams && window.tourState.teams[teamKey];
+      const freshRounds = {};
+      ROUND_KEYS.forEach(rk => {
+        freshRounds[rk] = createEmptyRoundData(format);
+        for (let p = 1; p <= pairCount; p++) {
+          const m = freshRounds[rk].matches[p - 1];
+          if (m && teamData && teamData.players) {
+            m.ourP1 = teamData.players[(p - 1) * 2] || '';
+            m.ourP2 = teamData.players[(p - 1) * 2 + 1] || '';
+          }
+        }
+      });
+      return freshRounds;
+    }
+
+    window.handleTournamentResetSelect = function(val) {
+      const sel = document.getElementById('resetTournamentSelect');
+      if (sel) sel.value = '';
+
+      if (!val) return;
+
+      let targetTitle = '';
+      let targetDesc = '';
+      if (val === 'A') {
+        targetTitle = 'A팀 경기 재설정';
+        targetDesc = 'A팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#15803d; margin-top:4px; display:inline-block;">(※ 선수 명단 및 B팀 경기 기록은 안전하게 유지됩니다)</span>';
+      } else if (val === 'B') {
+        targetTitle = 'B팀 경기 재설정';
+        targetDesc = 'B팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#ea580c; margin-top:4px; display:inline-block;">(※ 선수 명단 및 A팀 경기 기록은 안전하게 유지됩니다)</span>';
+      } else if (val === 'all') {
+        targetTitle = '전체 경기 재설정';
+        targetDesc = 'A팀과 B팀의 모든 라운드 경기 결과를 초기화하고 새롭게 시작하시겠습니까?<br><span style="font-size:11.5px; color:#be123c; margin-top:4px; display:inline-block;">(※ 양 팀 선수 명단은 안전하게 유지됩니다)</span>';
+      } else {
+        return;
+      }
+
+      openConfirmModal(
+        targetTitle,
+        targetDesc,
+        () => {
+          executeResetTournament(val);
+        },
+        '재설정',
+        '#e11d48'
+      );
+    };
+
+    async function executeResetTournament(target) {
+      const updatePayload = {};
+
+      if (target === 'A' || target === 'all') {
+        if (!window.tourState.teams.A) {
+          window.tourState.teams.A = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
+        }
+        window.tourState.teams.A.rounds = generateFreshRoundsForTeam('A');
+        updatePayload["teams.A.rounds"] = JSON.parse(JSON.stringify(window.tourState.teams.A.rounds));
+      }
+
+      if (target === 'B' || target === 'all') {
+        if (!window.tourState.teams.B) {
+          window.tourState.teams.B = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
+        }
+        window.tourState.teams.B.rounds = generateFreshRoundsForTeam('B');
+        updatePayload["teams.B.rounds"] = JSON.parse(JSON.stringify(window.tourState.teams.B.rounds));
+      }
+
+      try {
+        localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(window.tourState));
+      } catch(e) {}
+
+      if (isCloudReady && db) {
+        try {
+          setSyncLamp('saving');
+          const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+          await updateDoc(docRef, updatePayload);
+          setSyncLamp('');
+        } catch(e) {
+          console.warn("Tournament updateDoc error, fallback to setDoc:", e);
+          try {
+            const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+            await setDoc(docRef, JSON.parse(JSON.stringify(window.tourState)));
+            setSyncLamp('');
+          } catch(err2) {
+            console.warn("Tournament setDoc fallback error:", err2);
+            setSyncLamp('offline');
+          }
+        }
+      }
+
+      renderAllTabs();
+
+      if (target === 'A') showToast('A팀 경기 결과가 새롭게 재설정되었습니다.');
+      else if (target === 'B') showToast('B팀 경기 결과가 새롭게 재설정되었습니다.');
+      else showToast('전체 경기 결과가 새롭게 재설정되었습니다.');
+    }
+    window.executeResetTournament = executeResetTournament;
 
     window.saveTournamentEvent = async function() {
       const title = window.tourState.tournamentTitle || '단체전 대회';
