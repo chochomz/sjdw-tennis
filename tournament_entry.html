@@ -1101,7 +1101,7 @@
         <span style="font-size: 11px; color: #475569; font-weight: 700;">사진 및 경기 파일 첨부 하세요.</span>
         <label style="background: var(--primary); color: #ffffff; font-size: 11.5px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
           ➕ 파일선택
-          <input type="file" id="photoFileInput" accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;" />
+          <input type="file" id="photoFileInput" accept="image/*" multiple onchange="handlePhotoUpload(event)" style="display: none;" />
         </label>
       </div>
 
@@ -1116,6 +1116,18 @@
     <div style="position: relative; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; align-items: center;" onclick="event.stopPropagation();">
       <img id="lightboxImg" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" />
       <button onclick="closePhotoLightbox()" style="margin-top: 12px; padding: 8px 24px; border-radius: 9999px; background: rgba(255,255,255,0.25); color: #ffffff; font-weight: 800; border: 1px solid rgba(255,255,255,0.4); cursor: pointer;">닫기</button>
+    </div>
+  </div>
+
+  <!-- [모달: 확인 대화상자] -->
+  <div id="confirmModal" class="modal-backdrop" style="z-index: 150;">
+    <div class="modal-box" style="text-align: center; padding: 20px;">
+      <h3 id="confirmTitle" style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 8px;"></h3>
+      <p id="confirmMsg" style="font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.4;"></p>
+      <div style="display: flex; gap: 8px; justify-content: center;">
+        <button onclick="closeConfirmModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">취소</button>
+        <button id="confirmBtnOk" onclick="executeConfirm()" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">확인</button>
+      </div>
     </div>
   </div>
 
@@ -1148,7 +1160,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const CLUB_ID = "sejong-daewang-tennis-v1";
     const TOURNAMENT_STORAGE_KEY = 'sejong_tournament_entry_state_v1';
@@ -1169,139 +1181,6 @@
     let isRemoteUpdate = false;
     let syncDebounceTimer = null;
     let currentUserId = 'u_tour_' + Math.random().toString(36).substring(2, 9);
-
-    // --- [단체전 동시 입력 동기화 큐 및 트랜잭션 관리] ---
-    let pendingTourPlayerUpdates = {};
-    let pendingTourMatchUpdates = {};
-    let pendingTourTitleUpdate = null;
-    let tourPlayerSyncTimer = null;
-    let tourMatchSyncTimer = null;
-    let tourTitleSyncTimer = null;
-
-    function queueTourPlayerSync(team, isReserve, idx, val) {
-      if (!isCloudReady || !db) return;
-      const key = `${team}_${isReserve ? 'res' : 'play'}_${idx}`;
-      pendingTourPlayerUpdates[key] = { team, isReserve, idx, val };
-      if (tourPlayerSyncTimer) clearTimeout(tourPlayerSyncTimer);
-      tourPlayerSyncTimer = setTimeout(flushTourPlayerSync, 250);
-    }
-
-    async function flushTourPlayerSync() {
-      if (tourPlayerSyncTimer) { clearTimeout(tourPlayerSyncTimer); tourPlayerSyncTimer = null; }
-      const updates = { ...pendingTourPlayerUpdates };
-      pendingTourPlayerUpdates = {};
-      const keys = Object.keys(updates);
-      if (keys.length === 0 || !isCloudReady || !db) return;
-
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(docRef);
-          if (!snap.exists()) return;
-          const cloudData = snap.data();
-          const teams = cloudData.teams ? JSON.parse(JSON.stringify(cloudData.teams)) : {};
-          keys.forEach(k => {
-            const u = updates[k];
-            if (!teams[u.team]) teams[u.team] = createDefaultTeamState(cloudData.matchFormat || '3doubles');
-            if (u.isReserve) {
-              if (!teams[u.team].reserves) teams[u.team].reserves = ['', ''];
-              while (teams[u.team].reserves.length <= u.idx) teams[u.team].reserves.push('');
-              teams[u.team].reserves[u.idx] = u.val;
-            } else {
-              if (!teams[u.team].players) teams[u.team].players = [];
-              while (teams[u.team].players.length <= u.idx) teams[u.team].players.push('');
-              teams[u.team].players[u.idx] = u.val;
-            }
-          });
-          tx.update(docRef, { teams });
-        });
-        setSyncLamp('');
-      } catch (err) {
-        console.warn('Tour player sync transaction retry/fail:', err);
-        setSyncLamp('offline');
-      }
-    }
-
-    function queueTourMatchSync(team, roundKey, matchIdx, fieldUpdates) {
-      if (!isCloudReady || !db) return;
-      const key = `${team}_${roundKey}_${matchIdx !== null && matchIdx !== undefined ? matchIdx : 'club'}`;
-      if (!pendingTourMatchUpdates[key]) {
-        pendingTourMatchUpdates[key] = { team, roundKey, matchIdx, updates: {} };
-      }
-      Object.assign(pendingTourMatchUpdates[key].updates, fieldUpdates);
-      if (tourMatchSyncTimer) clearTimeout(tourMatchSyncTimer);
-      tourMatchSyncTimer = setTimeout(flushTourMatchSync, 250);
-    }
-
-    async function flushTourMatchSync() {
-      if (tourMatchSyncTimer) { clearTimeout(tourMatchSyncTimer); tourMatchSyncTimer = null; }
-      const batch = { ...pendingTourMatchUpdates };
-      pendingTourMatchUpdates = {};
-      const keys = Object.keys(batch);
-      if (keys.length === 0 || !isCloudReady || !db) return;
-
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(docRef);
-          if (!snap.exists()) return;
-          const cloudData = snap.data();
-          const teams = cloudData.teams ? JSON.parse(JSON.stringify(cloudData.teams)) : {};
-          keys.forEach(k => {
-            const item = batch[k];
-            const { team, roundKey, matchIdx, updates } = item;
-            if (!teams[team]) teams[team] = createDefaultTeamState(cloudData.matchFormat || '3doubles');
-            if (!teams[team].rounds) teams[team].rounds = {};
-            if (!teams[team].rounds[roundKey]) teams[team].rounds[roundKey] = createEmptyRoundData(cloudData.matchFormat || '3doubles');
-            const rData = teams[team].rounds[roundKey];
-
-            if (updates.opponentClub !== undefined) {
-              rData.opponentClub = updates.opponentClub;
-            }
-            if (matchIdx !== null && matchIdx !== undefined && rData.matches && rData.matches[matchIdx]) {
-              const m = rData.matches[matchIdx];
-              if (updates.scoreOur !== undefined) m.scoreOur = updates.scoreOur;
-              if (updates.scoreOpp !== undefined) m.scoreOpp = updates.scoreOpp;
-              if (updates.oppP1 !== undefined) m.oppP1 = updates.oppP1;
-              m.played = (m.scoreOur !== '' || m.scoreOpp !== '');
-            }
-          });
-          tx.update(docRef, { teams });
-        });
-        setSyncLamp('');
-      } catch (err) {
-        console.warn('Tour match sync transaction retry/fail:', err);
-        setSyncLamp('offline');
-      }
-    }
-
-    function queueTourTitleSync(title) {
-      if (!isCloudReady || !db) return;
-      pendingTourTitleUpdate = title;
-      if (tourTitleSyncTimer) clearTimeout(tourTitleSyncTimer);
-      tourTitleSyncTimer = setTimeout(flushTourTitleSync, 350);
-    }
-
-    async function flushTourTitleSync() {
-      if (tourTitleSyncTimer) { clearTimeout(tourTitleSyncTimer); tourTitleSyncTimer = null; }
-      if (pendingTourTitleUpdate === null || !isCloudReady || !db) return;
-      const title = pendingTourTitleUpdate;
-      pendingTourTitleUpdate = null;
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-        await updateDoc(docRef, { tournamentTitle: title });
-        setSyncLamp('');
-      } catch(e) {
-        console.warn('Tournament title sync error:', e);
-      }
-    }
-
-    async function flushAllTourPendingSync() {
-      await Promise.all([flushTourPlayerSync(), flushTourMatchSync(), flushTourTitleSync()]);
-    }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -1502,7 +1381,6 @@
 
     window.handleTournamentTitleInput = function(inputEl) {
       window.tourState.tournamentTitle = inputEl.value;
-      queueTourTitleSync(inputEl.value);
       saveTournamentState(false);
     };
 
@@ -1726,9 +1604,7 @@
 
     window.handleEntryPlayerInput = function(idx, val) {
       const teamData = getCurrentTeamData();
-      const cleanVal = val.trim();
-      teamData.players[idx] = cleanVal;
-      queueTourPlayerSync(window.tourState.currentTeam || 'A', false, idx, cleanVal);
+      teamData.players[idx] = val.trim();
       saveTournamentState(false);
       autoSyncPairsToMatches();
     };
@@ -1736,9 +1612,7 @@
     window.handleReservePlayerInput = function(reserveIdx, val) {
       const teamData = getCurrentTeamData();
       if (!teamData.reserves) teamData.reserves = ['', ''];
-      const cleanVal = val.trim();
-      teamData.reserves[reserveIdx] = cleanVal;
-      queueTourPlayerSync(window.tourState.currentTeam || 'A', true, reserveIdx, cleanVal);
+      teamData.reserves[reserveIdx] = val.trim();
       saveTournamentState(false);
     };
 
@@ -1911,17 +1785,13 @@
 
     window.handleOpponentClubChange = function(val) {
       const rData = getCurrentRoundData();
-      const cleanVal = val.trim();
-      rData.opponentClub = cleanVal;
-      queueTourMatchSync(window.tourState.currentTeam || 'A', window.tourState.currentRound || 'pre1', null, { opponentClub: cleanVal });
+      rData.opponentClub = val.trim();
       saveTournamentState(false);
     };
 
     window.handleOppPlayerInput = function(matchIdx, val) {
       const rData = getCurrentRoundData();
-      const cleanVal = val.trim();
-      rData.matches[matchIdx].oppP1 = cleanVal;
-      queueTourMatchSync(window.tourState.currentTeam || 'A', window.tourState.currentRound || 'pre1', matchIdx, { oppP1: cleanVal });
+      rData.matches[matchIdx].oppP1 = val.trim();
       saveTournamentState(false);
     };
 
@@ -1934,7 +1804,6 @@
       else m.scoreOpp = clean;
 
       m.played = (m.scoreOur !== '' || m.scoreOpp !== '');
-      queueTourMatchSync(window.tourState.currentTeam || 'A', window.tourState.currentRound || 'pre1', matchIdx, { scoreOur: m.scoreOur, scoreOpp: m.scoreOpp });
       saveTournamentState(false);
       renderMatchTab();
     };
@@ -2233,10 +2102,9 @@
     };
 
     window.saveTournamentEvent = async function() {
-      await flushAllTourPendingSync();
       const title = window.tourState.tournamentTitle || '단체전 대회';
       const dateStr = new Date().toLocaleDateString('ko-KR');
-      const docId = String(Date.now()) + '_' + Math.random().toString(36).substring(2, 6);
+      const docId = String(Date.now());
       const newArc = {
         id: docId,
         date: dateStr,
@@ -2366,12 +2234,47 @@
       document.getElementById('photosModal').classList.remove('show');
     };
 
-    function getNormalizedPhotos() {
-      if (!window.tourState.photos) window.tourState.photos = [];
-      return window.tourState.photos.map((item, idx) => {
+    let confirmAction = null;
+    window.openConfirmModal = function(title, msg, onConfirm, okText = '확인', okColor = '') {
+      const tEl = document.getElementById('confirmTitle');
+      const mEl = document.getElementById('confirmMsg');
+      const bEl = document.getElementById('confirmBtnOk') || document.querySelector('#confirmModal button:last-child');
+      if (tEl) tEl.innerText = title;
+      if (mEl) mEl.innerHTML = msg;
+      if (bEl) {
+        bEl.innerText = okText;
+        if (okColor) bEl.style.backgroundColor = okColor;
+        else bEl.style.backgroundColor = 'var(--primary)';
+      }
+      confirmAction = onConfirm;
+      const modal = document.getElementById('confirmModal');
+      if (modal) modal.classList.add('show');
+    };
+    window.closeConfirmModal = function() {
+      const modal = document.getElementById('confirmModal');
+      if (modal) modal.classList.remove('show');
+      confirmAction = null;
+    };
+    window.executeConfirm = function() {
+      if (confirmAction) confirmAction();
+      closeConfirmModal();
+    };
+
+    function normalizePhotosList(photos) {
+      if (!Array.isArray(photos)) return [];
+      return photos.map((item, idx) => {
         if (typeof item === 'string') {
-          return { id: 'old_' + idx, url: item, date: '이전 등록 사진', timestamp: 0 };
+          return {
+            id: 'p_legacy_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+            url: item,
+            date: '이전 등록 사진',
+            timestamp: Date.now() + idx
+          };
         }
+        if (!item.id) {
+          item.id = 'p_' + (item.timestamp || Date.now()) + '_' + idx + '_' + Math.random().toString(36).substring(2, 7);
+        }
+        if (!item.date) item.date = '기타';
         return item;
       });
     }
@@ -2380,7 +2283,9 @@
       const container = document.getElementById('photosGrid');
       if (!container) return;
 
-      const photos = getNormalizedPhotos();
+      window.tourState.photos = normalizePhotosList(window.tourState.photos);
+      const photos = window.tourState.photos;
+
       if (photos.length === 0) {
         container.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0;">등록된 사진이나 문서가 없습니다.</div>`;
         return;
@@ -2405,12 +2310,12 @@
         `;
 
         dateGroups[dateKey].forEach(photo => {
-          const photoUrl = photo.url || photo;
-          const photoId = photo.id || '';
+          const photoUrl = photo.url || '';
+          const photoId = photo.id;
           html += `
             <div style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #cbd5e1; background: #0f172a;">
               <img src="${photoUrl}" onclick="showPhotoLightbox('${photoUrl}')" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" />
-              <button onclick="deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.88); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">✕</button>
+              <button type="button" onclick="event.stopPropagation(); deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.9); color: #ffffff; border: none; border-radius: 50%; width: 15px; height: 15px; font-size: 8.5px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4); padding: 0;" title="사진 삭제">✕</button>
             </div>
           `;
         });
@@ -2421,117 +2326,93 @@
       container.innerHTML = html;
     }
 
-    window.handlePhotoUpload = function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    window.handlePhotoUpload = async function(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 800;
+      const processFile = (file, idx) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const maxDim = 800;
 
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
+              }
 
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
 
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.72);
-          if (!window.tourState.photos) window.tourState.photos = [];
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.72);
+              const now = new Date();
+              const days = ['일', '월', '화', '수', '목', '금', '토'];
+              const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}(${days[now.getDay()]})`;
 
-          const now = new Date();
-          const days = ['일', '월', '화', '수', '목', '금', '토'];
-          const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}(${days[now.getDay()]})`;
-
-          const newPhoto = {
-            id: 'p_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-            url: compressedBase64,
-            date: dateStr,
-            timestamp: Date.now()
+              resolve({
+                id: 'p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+                url: compressedBase64,
+                date: dateStr,
+                timestamp: Date.now() + idx
+              });
+            };
+            img.onerror = () => resolve(null);
+            img.src = e.target.result;
           };
-
-          window.tourState.photos.unshift(newPhoto);
-          if (window.tourState.photos.length > 20) window.tourState.photos = window.tourState.photos.slice(0, 20);
-
-          if (isCloudReady && db) {
-            (async () => {
-              try {
-                setSyncLamp('saving');
-                const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-                await runTransaction(db, async (tx) => {
-                  const snap = await tx.get(docRef);
-                  let curPhotos = [];
-                  if (snap.exists() && Array.isArray(snap.data().photos)) {
-                    curPhotos = snap.data().photos;
-                  }
-                  curPhotos.unshift(newPhoto);
-                  if (curPhotos.length > 20) curPhotos = curPhotos.slice(0, 20);
-                  tx.update(docRef, { photos: curPhotos });
-                });
-                setSyncLamp('');
-              } catch(err) {
-                console.warn('Tournament photo transaction error:', err);
-                setSyncLamp('offline');
-              }
-            })();
-          }
-
-          saveTournamentState(true);
-          renderPhotosGrid();
-          showToast('사진이 등록되었습니다.');
-          event.target.value = '';
-        };
-        img.src = e.target.result;
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
       };
-      reader.readAsDataURL(file);
-    };
 
-    window.deletePhoto = function(photoId) {
-      if (!window.tourState.photos) return;
-      window.tourState.photos = window.tourState.photos.filter((p, idx) => {
-        if (typeof p === 'string') return ('old_' + idx) !== photoId;
-        return p.id !== photoId;
-      });
-
-      if (isCloudReady && db) {
-        (async () => {
-          try {
-            setSyncLamp('saving');
-            const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
-            await runTransaction(db, async (tx) => {
-              const snap = await tx.get(docRef);
-              if (snap.exists() && Array.isArray(snap.data().photos)) {
-                let curPhotos = snap.data().photos.filter((p, idx) => {
-                  if (typeof p === 'string') return ('old_' + idx) !== photoId;
-                  return p.id !== photoId;
-                });
-                tx.update(docRef, { photos: curPhotos });
-              }
-            });
-            setSyncLamp('');
-          } catch(err) {
-            console.warn('Tournament photo delete transaction error:', err);
-            setSyncLamp('offline');
-          }
-        })();
+      const results = await Promise.all(files.map((file, idx) => processFile(file, idx)));
+      const newPhotos = results.filter(p => p !== null);
+      if (newPhotos.length === 0) {
+        event.target.value = '';
+        return;
       }
+
+      if (!window.tourState.photos) window.tourState.photos = [];
+      window.tourState.photos = normalizePhotosList(window.tourState.photos);
+      window.tourState.photos = [...newPhotos, ...window.tourState.photos];
+      if (window.tourState.photos.length > 30) window.tourState.photos = window.tourState.photos.slice(0, 30);
 
       saveTournamentState(true);
       renderPhotosGrid();
-      showToast('사진이 삭제되었습니다.');
+      showToast(`${newPhotos.length}장의 사진이 등록되었습니다.`);
+      event.target.value = '';
+    };
+
+    window.deletePhoto = function(photoId) {
+      if (!photoId) return;
+      openConfirmModal(
+        '사진 삭제',
+        '선택한 사진을 삭제하시겠습니까?<br><span style="font-size:11.5px; color:#64748b; margin-top:4px; display:inline-block;">확인 버튼을 누르면 사진이 완전히 삭제됩니다.</span>',
+        () => {
+          if (!window.tourState.photos) return;
+          window.tourState.photos = normalizePhotosList(window.tourState.photos);
+          const targetIdx = window.tourState.photos.findIndex(p => p && p.id === photoId);
+          if (targetIdx !== -1) {
+            window.tourState.photos.splice(targetIdx, 1);
+          }
+          saveTournamentState(true);
+          renderPhotosGrid();
+          showToast('사진이 삭제되었습니다.');
+        },
+        '확인',
+        '#e11d48'
+      );
     };
 
     window.showPhotoLightbox = function(src) {
@@ -2596,97 +2477,10 @@
             const cloudData = docSnap.data();
             if (cloudData) {
               isRemoteUpdate = true;
-              const activeEl = document.activeElement;
-              const activeId = activeEl ? activeEl.id : null;
-
-              if (cloudData.tournamentTitle !== undefined && activeId !== 'tournamentTitle') {
-                window.tourState.tournamentTitle = cloudData.tournamentTitle;
-                const titleInput = document.getElementById('tournamentTitle');
-                if (titleInput) titleInput.value = cloudData.tournamentTitle || '';
-              }
-
-              if (cloudData.matchFormat) window.tourState.matchFormat = cloudData.matchFormat;
-
-              if (Array.isArray(cloudData.photos)) {
-                window.tourState.photos = cloudData.photos;
-                const photosModal = document.getElementById('photosModal');
-                if (photosModal && photosModal.classList.contains('show')) {
-                  renderPhotosGrid();
-                }
-              }
-
-              if (cloudData.teams) {
-                if (!window.tourState.teams) window.tourState.teams = {};
-                ['A', 'B'].forEach(tKey => {
-                  const cTeam = cloudData.teams[tKey];
-                  if (!cTeam) return;
-                  if (!window.tourState.teams[tKey]) {
-                    window.tourState.teams[tKey] = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
-                  }
-                  const lTeam = window.tourState.teams[tKey];
-
-                  if (Array.isArray(cTeam.players)) {
-                    cTeam.players.forEach((p, idx) => {
-                      if (activeId !== `entry-player-${idx}`) {
-                        lTeam.players[idx] = p;
-                        const el = document.getElementById(`entry-player-${idx}`);
-                        if (el && el.value !== p) el.value = p;
-                      }
-                    });
-                  }
-
-                  if (Array.isArray(cTeam.reserves)) {
-                    cTeam.reserves.forEach((r, idx) => {
-                      if (activeId !== `entry-reserve-${idx}`) {
-                        lTeam.reserves[idx] = r;
-                        const el = document.getElementById(`entry-reserve-${idx}`);
-                        if (el && el.value !== r) el.value = r;
-                      }
-                    });
-                  }
-
-                  if (cTeam.rounds) {
-                    if (!lTeam.rounds) lTeam.rounds = {};
-                    ROUND_KEYS.forEach(rk => {
-                      const cRound = cTeam.rounds[rk];
-                      if (!cRound) return;
-                      if (!lTeam.rounds[rk]) lTeam.rounds[rk] = createEmptyRoundData(window.tourState.matchFormat || '3doubles');
-                      const lRound = lTeam.rounds[rk];
-
-                      if (activeId !== 'opponentClubInput' || window.tourState.currentRound !== rk || window.tourState.currentTeam !== tKey) {
-                        lRound.opponentClub = cRound.opponentClub || '';
-                        if (window.tourState.currentRound === rk && window.tourState.currentTeam === tKey) {
-                          const oppEl = document.getElementById('opponentClubInput');
-                          if (oppEl && oppEl.value !== lRound.opponentClub) oppEl.value = lRound.opponentClub;
-                        }
-                      }
-
-                      if (Array.isArray(cRound.matches)) {
-                        cRound.matches.forEach((cm, mIdx) => {
-                          if (!lRound.matches[mIdx]) return;
-                          const lm = lRound.matches[mIdx];
-                          if (activeId !== `score-our-${mIdx}`) lm.scoreOur = cm.scoreOur;
-                          if (activeId !== `score-opp-${mIdx}`) lm.scoreOpp = cm.scoreOpp;
-                          if (activeId !== `opp-player-${mIdx}`) lm.oppP1 = cm.oppP1;
-                          lm.ourP1 = cm.ourP1;
-                          lm.ourP2 = cm.ourP2;
-                          lm.played = (lm.scoreOur !== '' || lm.scoreOpp !== '');
-                        });
-                      }
-                    });
-                  }
-                });
-              }
-
+              window.tourState = Object.assign(window.tourState, cloudData);
+              if (!window.tourState.photos) window.tourState.photos = [];
               initControlsFromState();
-              const curTab = document.querySelector('.tab-btn.active')?.id.replace('tabBtn-', '') || 'match';
-              if (curTab === 'entry' && (!activeEl || !activeEl.classList.contains('entry-input'))) {
-                renderEntryTab();
-              } else if (curTab === 'match' && (!activeEl || (!activeEl.classList.contains('pair-score-input') && !activeEl.classList.contains('pair-input-inline') && activeId !== 'opponentClubInput'))) {
-                renderMatchTab();
-              } else if (curTab === 'summary') {
-                renderSummaryTab();
-              }
+              renderAllTabs();
               isRemoteUpdate = false;
             }
           } else {
