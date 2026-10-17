@@ -1248,9 +1248,6 @@
       <p style="font-size: 12px; color: #64748b; margin-bottom: 22px;">접속하실 모드를 선택해 주세요.</p>
 
       <div style="display: flex; flex-direction: column; gap: 11px;">
-        <button onclick="openInstallGuideModal()" style="background: rgba(255, 255, 255, 0.12); color: var(--accent); border: 1.5px dashed var(--accent); padding: 8px 10px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 800; transition: all 0.15s ease;">
-          <span>📱 스마트폰 홈화면에 앱 아이콘 추가하기</span>
-        </button>
         <button onclick="openSecretAuthModal()" style="background: #15803d; color: #ffffff; border: none; padding: 13px 10px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.35); transition: transform 0.1s ease;">
           <span style="font-size: 15px; font-weight: 900; white-space: nowrap;">⚡ 총무/경기이사</span>
           <span style="font-size: 11px; font-weight: 700; opacity: 0.92; letter-spacing: -0.3px;">(선수, 대진, 결과, 저장, 사진등록, 클라우드 연동)</span>
@@ -1262,9 +1259,10 @@
         </button>
       </div>
       
-      <p style="margin-top: 16px; font-size: 11px; color: #94a3b8; line-height: 1.5; text-align: left; padding: 0 4px; word-break: keep-all;">
-        ※ 일반 회원분은 개인기기에서 자유롭게 입력 저장 사용하시고, 클럽 클라우드 DB는 안전하게 보호됩니다.
-      </p>
+      <div style="margin-top: 16px; font-size: 11px; color: #94a3b8; line-height: 1.5; text-align: left; padding: 0 4px; display: flex; align-items: flex-start; gap: 4px; word-break: keep-all;">
+        <span style="flex-shrink: 0; line-height: 1.5;">※</span>
+        <span style="flex: 1; line-height: 1.5;">일반 회원분은 개인기기에서 자유롭게 입력 저장 사용하시고, 클럽 클라우드 DB는 안전하게 보호됩니다.</span>
+      </div>
     </div>
   </div>
 
@@ -1840,65 +1838,60 @@
     </div>
   </div>
 
-    <!-- [모달: 스마트폰 홈화면에 추가 안내] -->
+    <!-- [모달: 스마트폰 홈화면에 추가 안내 (모바일 최적화)] -->
   <div id="installGuideModal" class="modal-backdrop" style="z-index: 220;">
-    <div class="modal-box" style="max-width: 380px; text-align: center; padding: 22px 18px;">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px;">
-        <img src="data:image/png;base64,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" alt="앱 아이콘" style="width: 56px; height: 56px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2px solid var(--accent); flex-shrink: 0;" />
+    <div class="modal-box" style="max-width: 310px; text-align: center; padding: 13px 12px; border-radius: 16px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 7px;">
+        <img src="data:image/png;base64,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" alt="앱 아이콘" style="width: 34px; height: 34px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); border: 1.5px solid var(--accent); flex-shrink: 0;" />
         <div style="text-align: left;">
-          <div style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.2;">세종 대왕테니스 클럽</div>
-          <div style="font-size: 11.5px; color: var(--primary); font-weight: 800; margin-top: 3px;">홈화면 바로가기 앱 추가</div>
+          <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; line-height: 1.2;">세종 대왕테니스 클럽</div>
+          <div style="font-size: 11px; color: var(--primary); font-weight: 800; margin-top: 1px;">홈화면 바로가기 추가</div>
         </div>
       </div>
 
-      <p style="font-size: 12px; color: #64748b; margin-bottom: 14px; line-height: 1.45; word-break: keep-all;">
-        스마트폰 바탕화면에 앱 아이콘을 추가하면 카톡이나 브라우저 검색 없이 <b>터치 한 번으로 즉시 접속</b>할 수 있습니다.
+      <p style="font-size: 11px; color: #64748b; margin-bottom: 8px; line-height: 1.35; word-break: keep-all;">
+        홈화면에 추가하면 카톡 검색 없이 <b>터치 한 번으로 즉시 접속</b>됩니다.
       </p>
 
       <!-- 안드로이드 원터치 자동 설치 버튼 (브라우저 지원 시 표시) -->
-      <div id="nativeInstallWrap" style="display: none; margin-bottom: 12px;">
-        <button onclick="triggerNativeInstall()" class="btn-primary-large" style="padding: 11px; font-size: 13.5px; background: #15803d; box-shadow: 0 4px 10px rgba(21, 128, 61, 0.3);">
+      <div id="nativeInstallWrap" style="display: none; margin-bottom: 7px;">
+        <button onclick="triggerNativeInstall()" class="btn-primary-large" style="padding: 7px; font-size: 12px; background: #15803d; box-shadow: 0 2px 6px rgba(21, 128, 61, 0.3);">
           ⚡ 즉시 원터치 앱 추가하기
         </button>
       </div>
 
-      <div id="installGuideContent" style="max-height: 48vh; overflow-y: auto; text-align: left; font-size: 12px; color: #334155; line-height: 1.6; display: flex; flex-direction: column; gap: 10px; padding-right: 2px;">
+      <div id="installGuideContent" style="text-align: left; font-size: 11px; color: #334155; line-height: 1.4; display: flex; flex-direction: column; gap: 5px;">
         <!-- 카카오톡 인앱 브라우저 경고 -->
-        <div id="kakaoInAppBanner" style="display: none; background: #fef08a; border: 1.5px solid #facc15; border-radius: 10px; padding: 9px 11px; color: #713f12; font-size: 11.5px;">
-          <b>💬 카카오톡 안에서 접속 중이신가요?</b><br>
-          카카오톡 화면 우측 상단(또는 하단)의 <b>더보기(⋮)</b>를 누르고 <b>[다른 브라우저로 열기]</b>(사파리 또는 크롬)를 선택하신 후 아래 방법으로 추가해 주세요.
+        <div id="kakaoInAppBanner" style="display: none; background: #fef08a; border: 1px solid #facc15; border-radius: 7px; padding: 5px 8px; color: #713f12; font-size: 10px; line-height: 1.35;">
+          <b>💬 카카오톡:</b> 우측 상단 <b>더보기(⋮)</b> ➔ <b>[다른 브라우저로 열기]</b> 후 추가하세요.
         </div>
 
         <!-- 아이폰 / 사파리 안내 -->
-        <div id="iosSafariGuide" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 12px;">
-          <div style="font-weight: 900; color: #1e293b; font-size: 12.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
-            <span>🍎 아이폰 / 사파리 (Safari)</span>
+        <div id="iosSafariGuide" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px;">
+          <div style="font-weight: 900; color: #1e293b; font-size: 11px; margin-bottom: 2px;">
+            🍎 아이폰 (사파리)
           </div>
-          <ol style="padding-left: 18px; margin: 0; display: flex; flex-direction: column; gap: 5px; font-size: 11.5px;">
-            <li>사파리 하단(또는 상단)의 <b>공유 버튼 (네모에 위쪽 화살표 ↑)</b>을 터치합니다.</li>
-            <li>메뉴를 위로 올려 <b>[홈 화면에 추가 ➕]</b>를 선택합니다.</li>
-            <li>우측 상단 <b>[추가]</b>를 누르면 바탕화면에 '대왕테니스' 앱 아이콘이 생성됩니다.</li>
-          </ol>
+          <div style="font-size: 10.5px; color: #475569; line-height: 1.35;">
+            하단 <b>공유 버튼(↑)</b> ➔ <b>[홈 화면에 추가 ➕]</b> ➔ <b>[추가]</b>
+          </div>
         </div>
 
         <!-- 갤럭시 / 안드로이드 안내 -->
-        <div id="androidGuide" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 12px;">
-          <div style="font-weight: 900; color: #1e293b; font-size: 12.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
-            <span>🤖 갤럭시 / 안드로이드 (크롬·삼성인터넷)</span>
+        <div id="androidGuide" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px;">
+          <div style="font-weight: 900; color: #1e293b; font-size: 11px; margin-bottom: 2px;">
+            🤖 갤럭시 / 안드로이드 (크롬·삼성)
           </div>
-          <ol style="padding-left: 18px; margin: 0; display: flex; flex-direction: column; gap: 5px; font-size: 11.5px;">
-            <li>브라우저 상단(또는 하단)의 <b>더보기 메뉴 (점 세개 ⋮ 또는 ☰)</b>를 터치합니다.</li>
-            <li><b>[홈 화면에 추가]</b> 또는 <b>[현재 페이지 추가 ➔ 홈 화면]</b>을 선택합니다.</li>
-            <li><b>[추가]</b>를 누르면 스마트폰 바탕화면에 앱 아이콘이 생성됩니다.</li>
-          </ol>
+          <div style="font-size: 10.5px; color: #475569; line-height: 1.35;">
+            메뉴 <b>더보기(⋮ 또는 ☰)</b> ➔ <b>[홈 화면에 추가]</b> ➔ <b>[추가]</b>
+          </div>
         </div>
       </div>
 
-      <div style="display: flex; gap: 8px; margin-top: 14px;">
-        <button onclick="copyCurrentWebUrl()" style="flex: 1.2; padding: 9px; border-radius: 10px; background: #f0fdf4; color: #166534; border: 1.5px solid #bbf7d0; font-weight: 800; font-size: 12px; cursor: pointer;">
-          🔗 주소(링크) 복사
+      <div style="display: flex; gap: 6px; margin-top: 9px;">
+        <button onclick="copyCurrentWebUrl()" style="flex: 1.1; padding: 6px; border-radius: 7px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-weight: 800; font-size: 11px; cursor: pointer;">
+          🔗 주소 복사
         </button>
-        <button onclick="closeInstallGuideModal()" style="flex: 1; padding: 9px; border-radius: 10px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; font-size: 12px; cursor: pointer;">
+        <button onclick="closeInstallGuideModal()" style="flex: 1; padding: 6px; border-radius: 7px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; font-size: 11px; cursor: pointer;">
           닫기
         </button>
       </div>
