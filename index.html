@@ -1952,8 +1952,10 @@
 
     let savedLocal = null;
     try {
+      const storedGuest = sessionStorage.getItem('sejong_guest_session');
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) savedLocal = JSON.parse(stored);
+      if (storedGuest) savedLocal = JSON.parse(storedGuest);
+      else if (stored) savedLocal = JSON.parse(stored);
     } catch(e) {}
 
     window.state = savedLocal || {
@@ -2026,9 +2028,28 @@
       if (meta && themeColors[activeTheme]) meta.setAttribute('content', themeColors[activeTheme]);
     }
 
-    // [대회참여 브랜치 이동 핸들러: Canvas 404 및 Sandboxed iframe SyntaxError/SecurityError 완벽 방지]
+    // [대회참여 브랜치 이동 핸들러: 직전 화면(역할 및 탭 상태) 보존 및 Canvas/Sandbox 보호]
     window.handleNavigateToTournament = function() {
       try {
+        // 복귀 시 직전 화면으로 이동하기 위한 상태 저장
+        try {
+          const navState = {
+            role: window.currentUserRole || 'spectator',
+            tab: (window.state && window.state.currentTab) ? window.state.currentTab : 'players',
+            timestamp: Date.now()
+          };
+          sessionStorage.setItem('sejong_tournament_nav_state', JSON.stringify(navState));
+          sessionStorage.setItem('sejong_navigating_to_tournament', 'true');
+
+          if (window.currentUserRole === 'spectator' && window.state) {
+            const titleInput = document.getElementById('eventTitle');
+            if (titleInput) window.state.eventTitle = titleInput.value;
+            sessionStorage.setItem('sejong_guest_session', JSON.stringify(window.state));
+          }
+        } catch (stateErr) {
+          console.warn('Nav state save error:', stateErr);
+        }
+
         const loc = window.location;
         const isEmbedOrBlob = !loc ||
                               !loc.protocol ||
@@ -3589,6 +3610,10 @@
     }
 
     window.addEventListener('beforeunload', () => {
+      // 대회참여 앱으로 이동할 때는 직전 세션을 초기화하지 않고 보존
+      if (sessionStorage.getItem('sejong_navigating_to_tournament')) {
+        return;
+      }
       if (window.currentUserRole === 'spectator') {
         sessionStorage.removeItem('sejong_guest_session');
       }
@@ -3695,6 +3720,31 @@
       }
     }
 
+    function checkAndRestoreTournamentReturn() {
+      try {
+        const raw = sessionStorage.getItem('sejong_tournament_nav_state');
+        if (!raw) return false;
+        const navState = JSON.parse(raw);
+        sessionStorage.removeItem('sejong_tournament_nav_state');
+        sessionStorage.removeItem('sejong_navigating_to_tournament');
+
+        if (navState && navState.role) {
+          window.currentUserRole = navState.role;
+          const roleModal = document.getElementById('roleGateModal');
+          if (roleModal) roleModal.classList.remove('show');
+          applyRolePermissions(navState.role === 'admin');
+
+          const targetTab = navState.tab || 'players';
+          switchTab(targetTab);
+          showToast('대회참여에서 이전 화면으로 복귀했습니다.');
+          return true;
+        }
+      } catch (e) {
+        console.warn('Tournament return restore error:', e);
+      }
+      return false;
+    }
+
     window.onload = function() {
       updateLiveClock();
       applyTheme(localStorage.getItem('sejong_user_theme') || window.state.theme || 'summer');
@@ -3706,10 +3756,20 @@
       if (titleInput && window.state.eventTitle) {
         titleInput.value = window.state.eventTitle;
       }
-      switchTab(window.state.currentTab || 'players');
-      applyRolePermissions(false);
+
+      const restored = checkAndRestoreTournamentReturn();
+      if (!restored) {
+        switchTab(window.state.currentTab || 'players');
+        applyRolePermissions(false);
+      }
       initCloudSync();
     };
+
+    window.addEventListener('pageshow', (event) => {
+      if (sessionStorage.getItem('sejong_tournament_nav_state')) {
+        checkAndRestoreTournamentReturn();
+      }
+    });
   </script>
 </body>
 </html>
