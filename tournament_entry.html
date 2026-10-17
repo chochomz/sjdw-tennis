@@ -811,6 +811,36 @@
       padding: 8px;
       background: #ffffff;
     }
+    @keyframes blink-personal-badge {
+      0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.9);
+        background: rgba(14, 165, 233, 0.35);
+        border-color: rgba(125, 211, 252, 0.85);
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.35;
+        box-shadow: 0 0 1px transparent;
+        background: rgba(14, 165, 233, 0.1);
+        border-color: rgba(125, 211, 252, 0.3);
+        transform: scale(0.96);
+      }
+    }
+    .blinking-personal-badge {
+      animation: blink-personal-badge 1.2s infinite ease-in-out !important;
+      color: #7dd3fc !important;
+      padding: 1.5px 6.5px !important;
+      border-radius: 9999px !important;
+      border: 1px solid rgba(125, 211, 252, 0.7) !important;
+      font-size: 9.5px !important;
+      font-weight: 800 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 3px !important;
+      cursor: default !important;
+      letter-spacing: -0.3px !important;
+    }
   </style>
 </head>
 <body>
@@ -824,7 +854,7 @@
         <span style="opacity: 0.35; font-size: 9px; margin: 0 1px;">|</span>
         <span id="tourUserCountBadge" style="font-size: 9.5px; font-weight: 800; color: var(--accent);">1명</span>
         <span style="opacity: 0.35; font-size: 9px; margin: 0 1px;">|</span>
-        <span style="font-size: 9.5px; font-weight: 800; color: var(--accent);">⚡ 실시간연동</span>
+        <span id="tourRoleBadge" style="font-size: 9.5px; font-weight: 800; color: var(--accent);">⚡ 관리모드</span>
       </div>
 
       <!-- 상단 타이틀 바: 중앙 정렬 클럽명 + 우측 규칙/이용가이드 -->
@@ -1166,8 +1196,11 @@
 
   <div id="captureOverlay" class="capture-overlay">
     <div class="capture-topbar">
-      <span>📸 이 화면을 캡처하여 클럽 회원들과 공유하세요</span>
-      <button onclick="closeCaptureView()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer;">✕</button>
+      <span>📸 이 화면을 캡처하여 저장/공유하세요</span>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button id="captureKdkReturnBtn" onclick="handleExitResetAndLeave()" style="display: none; background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 900; cursor: pointer;">🏠 KDK 복귀</button>
+        <button onclick="closeCaptureView()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer;">✕</button>
+      </div>
     </div>
     <div id="captureContent" class="capture-scroll"></div>
   </div>
@@ -1180,6 +1213,30 @@
       <div style="display: flex; gap: 8px; justify-content: center;">
         <button onclick="closeConfirmModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">취소</button>
         <button onclick="executeConfirm()" id="confirmOkBtn" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">진행하기</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- [모달: 일반회원 퇴장 확인 & 캡처 안내] -->
+  <div id="exitConfirmModal" class="modal-backdrop" style="z-index: 180;">
+    <div class="modal-box" style="text-align: center; padding: 22px 18px; max-width: 360px;">
+      <div style="font-size: 32px; margin-bottom: 8px;">📸</div>
+      <h3 style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 8px;">개인 모드 종료 &amp; KDK 복귀</h3>
+      <p style="font-size: 12.5px; color: #475569; margin-bottom: 16px; line-height: 1.5;">
+        지금 KDK 매니저로 복귀하시면 개인 모드에서 입력하신 경기 데이터가 초기화됩니다.<br><br>
+        <span style="color: var(--primary); font-weight: 800;">나가기 전에 경기 결과를 사진(캡처)으로 저장해 두시겠습니까?</span>
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button onclick="handleExitCapture()" class="btn-primary-large" style="padding: 11px; font-size: 13px;">
+          📸 결과 캡처하기
+        </button>
+        <button onclick="handleExitResetAndLeave()" style="width: 100%; padding: 10px; border-radius: 12px; background: #fff1f2; color: #be123c; border: 1.5px solid #fecdd3; font-weight: 900; font-size: 12.5px; cursor: pointer;">
+          초기화하고 그냥 복귀하기
+        </button>
+        <button onclick="closeExitConfirmModal()" style="width: 100%; padding: 9px; border-radius: 10px; background: #f1f5f9; color: #64748b; border: none; font-weight: 800; font-size: 12px; cursor: pointer;">
+          계속 작성 (취소)
+        </button>
       </div>
     </div>
   </div>
@@ -1223,6 +1280,40 @@
     const CLUB_ID = "sejong-daewang-tennis-v1";
     const TOURNAMENT_STORAGE_KEY = 'sejong_tournament_entry_state_v1';
     const TOURNAMENT_ARCHIVE_KEY = 'sejong_tournament_archive_v1';
+    const TOURNAMENT_GUEST_KEY = 'sejong_tournament_guest_session_v1';
+
+    let cloudOriginalTourState = null;
+
+    function detectUserRole() {
+      try {
+        const raw = sessionStorage.getItem('sejong_tournament_nav_state');
+        if (raw) {
+          const nav = JSON.parse(raw);
+          if (nav && nav.role) return nav.role;
+        }
+      } catch(e) {}
+      return 'spectator';
+    }
+
+    window.currentUserRole = detectUserRole();
+
+    function applyRoleUI() {
+      const badge = document.getElementById('tourRoleBadge');
+      if (window.currentUserRole === 'admin') {
+        if (badge) {
+          badge.className = '';
+          badge.innerText = '⚡ 관리모드';
+          badge.style.color = 'var(--accent)';
+          badge.title = '관리자 모드: 실시간 클라우드 동기화';
+        }
+      } else {
+        if (badge) {
+          badge.className = 'blinking-personal-badge';
+          badge.innerHTML = '👀 개인모드';
+          badge.title = '개인모드 사용 중: 클라우드 저장 없이 안전하게 테스트 가능 (종료 시 초기화)';
+        }
+      }
+    }
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2EQ52cnJjfwLnD55H3UeS7s9gFvxFuKk",
@@ -1308,8 +1399,14 @@
 
     let savedData = null;
     try {
-      const stored = localStorage.getItem(TOURNAMENT_STORAGE_KEY);
-      if (stored) savedData = JSON.parse(stored);
+      if (window.currentUserRole === 'spectator') {
+        const guestStored = sessionStorage.getItem(TOURNAMENT_GUEST_KEY);
+        if (guestStored) savedData = JSON.parse(guestStored);
+      }
+      if (!savedData) {
+        const stored = localStorage.getItem(TOURNAMENT_STORAGE_KEY);
+        if (stored) savedData = JSON.parse(stored);
+      }
     } catch(e) {}
 
     window.tourState = savedData || {
@@ -1408,18 +1505,13 @@
     window.openPoemModal = function() { document.getElementById('poemModal').classList.add('show'); };
     window.closePoemModal = function() { document.getElementById('poemModal').classList.remove('show'); };
 
-    window.handleNavigateToKdk = function() {
-      try {
-        saveTournamentState(true);
-      } catch(e) {}
-
+    function performActualNavigateToKdk() {
       const isEmbedEnv = window.location.pathname.includes('/embeds/') || window.location.hostname.includes('usercontent.goog');
       if (isEmbedEnv) {
         showToast('💡 GitHub/실제 서버 환경에서 index.html로 이동합니다.');
         return;
       }
 
-      // 직전 KDK 상태가 저장되어 있거나 referrer가 index.html인 경우 우선 history.back() 활용
       const hasIndexReferrer = document.referrer && document.referrer.includes('index.html');
       const hasNavState = !!sessionStorage.getItem('sejong_tournament_nav_state');
 
@@ -1435,6 +1527,43 @@
       } catch(e) {
         window.location.href = './index.html';
       }
+    }
+
+    window.handleNavigateToKdk = function() {
+      if (window.currentUserRole === 'admin') {
+        try {
+          saveTournamentState(true);
+        } catch(e) {}
+        performActualNavigateToKdk();
+        return;
+      }
+
+      const hasGuestData = !!sessionStorage.getItem(TOURNAMENT_GUEST_KEY);
+      if (hasGuestData) {
+        openExitConfirmModal();
+      } else {
+        performActualNavigateToKdk();
+      }
+    };
+
+    window.openExitConfirmModal = function() {
+      const modal = document.getElementById('exitConfirmModal');
+      if (modal) modal.classList.add('show');
+    };
+    window.closeExitConfirmModal = function() {
+      const modal = document.getElementById('exitConfirmModal');
+      if (modal) modal.classList.remove('show');
+    };
+    window.handleExitCapture = function() {
+      closeExitConfirmModal();
+      openCaptureView(true);
+    };
+    window.handleExitResetAndLeave = function() {
+      closeExitConfirmModal();
+      try {
+        sessionStorage.removeItem(TOURNAMENT_GUEST_KEY);
+      } catch(e) {}
+      performActualNavigateToKdk();
     };
 
     window.handleTournamentTitleInput = function(inputEl) {
@@ -1443,6 +1572,13 @@
     };
 
     async function saveTournamentState(immediate = false) {
+      if (window.currentUserRole !== 'admin') {
+        try {
+          sessionStorage.setItem(TOURNAMENT_GUEST_KEY, JSON.stringify(window.tourState));
+        } catch(e) {}
+        return;
+      }
+
       try {
         localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(window.tourState));
       } catch(e) {}
@@ -2082,7 +2218,11 @@
       showToast('전적이 복사되었습니다! 카톡에 붙여넣어주세요.');
     }
 
-    window.openCaptureView = function() {
+    window.openCaptureView = function(fromExit = false) {
+      const exitBtn = document.getElementById('captureKdkReturnBtn');
+      if (exitBtn) {
+        exitBtn.style.display = (window.currentUserRole === 'spectator' && fromExit) ? 'inline-block' : 'none';
+      }
       const title = window.tourState.tournamentTitle || '대회';
       const teamKey = window.tourState.currentTeam || 'A';
       const teamData = getCurrentTeamData();
@@ -2229,6 +2369,17 @@
         updatePayload["teams.B.rounds"] = JSON.parse(JSON.stringify(window.tourState.teams.B.rounds));
       }
 
+      if (window.currentUserRole !== 'admin') {
+        try {
+          sessionStorage.setItem(TOURNAMENT_GUEST_KEY, JSON.stringify(window.tourState));
+        } catch(e) {}
+        renderAllTabs();
+        if (target === 'A') showToast('A팀 경기 결과가 재설정되었습니다. (개인모드)');
+        else if (target === 'B') showToast('B팀 경기 결과가 재설정되었습니다. (개인모드)');
+        else showToast('전체 경기 결과가 재설정되었습니다. (개인모드)');
+        return;
+      }
+
       try {
         localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(window.tourState));
       } catch(e) {}
@@ -2321,6 +2472,18 @@
     window.detectHighestStanding = detectHighestStanding;
 
     window.saveTournamentEvent = function() {
+      if (window.currentUserRole !== 'admin') {
+        openConfirmModal(
+          '개인 모드 안내',
+          '일반회원(개인모드)에서는 클라우드에 영구 저장되지 않습니다.<br><br><span style="font-size:12px; font-weight:800; color:var(--primary);">대신 지금 작성된 경기 결과를 <b>사진(캡처)</b>으로 저장해 두시겠습니까?</span>',
+          () => {
+            openCaptureView();
+          },
+          '📸 결과 캡처하기',
+          'var(--primary)'
+        );
+        return;
+      }
       const title = window.tourState.tournamentTitle || '단체전 대회';
       const autoStanding = detectHighestStanding();
 
@@ -2503,6 +2666,10 @@
     };
 
     window.deleteTournamentArchive = async function(id) {
+      if (window.currentUserRole !== 'admin') {
+        showToast('💡 일반회원 모드에서는 저장 기록을 삭제할 수 없습니다.');
+        return;
+      }
       try {
         if (isCloudReady && db) {
           await deleteDoc(doc(db, 'clubs', CLUB_ID, 'tournament_archives', id));
@@ -2769,6 +2936,12 @@
           if (docSnap.exists()) {
             const cloudData = docSnap.data();
             if (cloudData) {
+              cloudOriginalTourState = JSON.parse(JSON.stringify(cloudData));
+
+              if (window.currentUserRole === 'spectator' && sessionStorage.getItem(TOURNAMENT_GUEST_KEY)) {
+                return;
+              }
+
               isRemoteUpdate = true;
               window.tourState = Object.assign(window.tourState, cloudData);
               if (!window.tourState.photos) window.tourState.photos = [];
@@ -2777,7 +2950,9 @@
               isRemoteUpdate = false;
             }
           } else {
-            saveTournamentState(true);
+            if (window.currentUserRole === 'admin') {
+              saveTournamentState(true);
+            }
           }
         }, (err) => {
           console.warn("Tournament snapshot error:", err);
@@ -2792,6 +2967,7 @@
     }
 
     window.onload = function() {
+      applyRoleUI();
       updateLiveClock();
       applyTheme(localStorage.getItem('sejong_user_theme') || 'summer');
       initControlsFromState();
