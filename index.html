@@ -1403,7 +1403,7 @@
           </div>
 
           <div class="sub-bar" style="border-bottom: none; padding-bottom: 4px; margin-bottom: 4px;">
-            <span style="font-size: 13px; font-weight: 900; color: #1e293b;">🎾 실시간 순위표</span>
+            <span style="font-size: 13px; font-weight: 900; color: #1e293b;">🏆 실시간 순위표</span>
             <span style="font-size: 10px; color: #64748b; font-weight: 700;">승수 &gt; 득실차 &gt; 승률 순</span>
           </div>
 
@@ -2027,6 +2027,23 @@
 
     // [대회참여 브랜치 이동 핸들러: 직전 화면(역할 및 탭 상태) 보존 및 Canvas/Sandbox 보호]
     window.handleNavigateToTournament = function() {
+      if (window.currentUserRole === 'spectator') {
+        openConfirmModal(
+          '🎾 단체전 대회참여 (개인모드 안내)',
+          `일반회원 모드로 단체전 페이지에 입장합니다.<br><br><div style="background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:10px; padding:10px 12px; text-align:left; font-size:12px; color:#0369a1; line-height:1.55;">  <b>• ⚡ 개인모드 자유 체험:</b> 대진 편성 및 점수 입력을 자유롭게 시뮬레이션할 수 있습니다.<br>  <b>• ⚠️ 임시 보관:</b> 데이터는 클라우드에 저장되지 않고 본인 기기 세션에만 임시 보관됩니다.<br>  <b>• 📸 종료 시 초기화:</b> KDK로 복귀하거나 창을 닫으면 작성 내용이 리셋되므로, 경기 후 <b>[📸 캡처공유]</b>로 사진을 저장해 두세요.</div><br>단체전 대회참여 페이지로 입장하시겠습니까?`,
+          function() {
+            performActualNavigateToTournament();
+          },
+          '입장하기',
+          'var(--primary)'
+        );
+        return;
+      }
+
+      performActualNavigateToTournament();
+    };
+
+    function performActualNavigateToTournament() {
       try {
         // 복귀 시 직전 화면으로 이동하기 위한 상태 저장
         try {
@@ -2076,7 +2093,7 @@
         console.warn('Sandbox navigation guard activated:', err);
         showToast('💡 미리보기 환경에서는 페이지 이동이 보호됩니다.');
       }
-    };
+    }
 
     window.openManualModal = function() { document.getElementById('manualModal').classList.add('show'); }
     window.closeManualModal = function() { document.getElementById('manualModal').classList.remove('show'); }
@@ -3128,10 +3145,10 @@
         wrapper.innerHTML = buildTableHtml(data.standings);
       } else {
         wrapper.innerHTML = `
-        <div style="font-size: 14px; font-weight: 900; color: #15803d; text-align: center; margin: 6px 0 4px 0;">🎾 A그룹 순위표</div>
-        ${buildTableHtml(data.standingsA, 'A')}
-        <div style="font-size: 14px; font-weight: 900; color: #ea580c; text-align: center; margin: 10px 0 4px 0;">🎾 B그룹 순위표</div>
-        ${buildTableHtml(data.standingsB, 'B')}
+          <div style="font-size: 14px; font-weight: 900; color: #15803d; margin: 4px 0 2px 2px;">🎾 A그룹 순위표</div>
+          ${buildTableHtml(data.standingsA, 'A')}
+          <div style="font-size: 14px; font-weight: 900; color: #ea580c; margin: 8px 0 2px 2px;">🎾 B그룹 순위표</div>
+          ${buildTableHtml(data.standingsB, 'B')}
         `;
       }
     }
