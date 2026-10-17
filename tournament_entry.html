@@ -205,11 +205,12 @@
     }
 
     .club-title-text {
-      font-size: clamp(15px, 4.8vw, 18px);
+      font-size: 15px;
       font-weight: 900;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.6px;
       white-space: nowrap;
-      overflow: visible;
+      overflow: hidden;
+      text-overflow: ellipsis;
       color: #ffffff;
       background: linear-gradient(
         110deg,
@@ -248,7 +249,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 3px 6px;
+      padding: 3px 5px;
       border-radius: 9999px;
       font-size: 9.5px;
       font-weight: 800;
@@ -256,6 +257,7 @@
       line-height: 1;
       text-decoration: none;
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .rules-trigger-btn:active, .manual-trigger-btn:active {
       transform: scale(0.95);
@@ -561,26 +563,33 @@
       min-width: 0;
     }
 
-    /* 우리팀 이름 2열 큼지막하게 배치 (모바일에서 절대 잘리지 않도록 명확한 그리드와 폰트 보장) */
+    /* 우리팀 이름 2열 큼지막하게 배치 (중앙 큰콜론 : 구분) */
+    /* 우리팀 이름 2단(위/아래 2열) 세로 배치 (모바일에서 칸을 벗어나지 않도록 100% 폭 활용, 콜론 삭제) */
     .pair-name-box-2col {
       background: #ffffff;
       border: 1.5px solid #cbd5e1;
       border-radius: 8px;
-      padding: 6px 8px;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px;
-      align-items: center;
+      padding: 4px 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       min-height: 52px;
+      box-sizing: border-box;
     }
     .pair-name-text-item {
       font-size: 13.5px;
       font-weight: 900;
       color: #0f172a;
       text-align: center;
-      word-break: keep-all;
-      overflow-wrap: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       line-height: 1.25;
+    }
+    .pair-name-text-item.pair-name-divider {
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      margin-top: 2px;
+      padding-top: 2px;
     }
 
     /* 상대선수 이름 1열 (세로문구 '상대' 삭제됨) */
@@ -1330,11 +1339,27 @@
     window.closePoemModal = function() { document.getElementById('poemModal').classList.remove('show'); };
 
     window.handleNavigateToKdk = function() {
+      try {
+        saveTournamentState(true);
+      } catch(e) {}
+
       const isEmbedEnv = window.location.pathname.includes('/embeds/') || window.location.hostname.includes('usercontent.goog');
       if (isEmbedEnv) {
         showToast('💡 GitHub/실제 서버 환경에서 index.html로 이동합니다.');
         return;
       }
+
+      // 직전 KDK 상태가 저장되어 있거나 referrer가 index.html인 경우 우선 history.back() 활용
+      const hasIndexReferrer = document.referrer && document.referrer.includes('index.html');
+      const hasNavState = !!sessionStorage.getItem('sejong_tournament_nav_state');
+
+      if ((hasIndexReferrer || hasNavState) && window.history.length > 1) {
+        try {
+          window.history.back();
+          return;
+        } catch(e) {}
+      }
+
       try {
         window.location.assign('./index.html');
       } catch(e) {
@@ -1685,7 +1710,7 @@
               <div class="pair-col">
                 <div class="pair-name-box-2col">
                   <span class="pair-name-text-item">${p1Name}</span>
-                  <span class="pair-name-text-item">${p2Name}</span>
+                  <span class="pair-name-text-item pair-name-divider">${p2Name}</span>
                 </div>
               </div>
 
@@ -1954,7 +1979,7 @@
           txt += `■ ${ROUND_LABELS[rk]} [${resText} ${ourW}:${oppW}] vs ${opp}\n`;
           rData.matches.slice(0, pairCount).forEach(m => {
             if (m.played) {
-              const ourP = `${m.ourP1 || '선수'}/${m.ourP2 || '선수'}`;
+              const ourP = `${m.ourP1 || '선수'} : ${m.ourP2 || '선수'}`;
               const oppP = m.oppP1 || '상대조';
               txt += `  - ${teamKey}-${m.pairNum}조: ${ourP} (${m.scoreOur}:${m.scoreOpp}) ${oppP}\n`;
             }
@@ -2042,7 +2067,7 @@
           `;
           rData.matches.slice(0, pairCount).forEach(m => {
             if (m.played) {
-              const ourP = `${m.ourP1 || '선수'}/${m.ourP2 || '선수'}`;
+              const ourP = `${m.ourP1 || '선수'} : ${m.ourP2 || '선수'}`;
               const oppP = m.oppP1 || '상대조';
               html += `
                 <div style="display: flex; justify-content: space-between; font-size: 10.5px; padding: 1.5px 0; color: #334155;">
