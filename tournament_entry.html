@@ -260,6 +260,13 @@
       transform: scale(0.95);
       background: rgba(255, 255, 255, 0.25);
     }
+    .manual-trigger-btn {
+      background: rgba(190, 242, 100, 0.22) !important;
+      border: 1px solid rgba(190, 242, 100, 0.6) !important;
+      color: var(--accent) !important;
+      font-weight: 900 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
 
     /* 대회명 입력 및 우측 KDK 버튼 래퍼 (우측 세로 정렬선 일치) */
     .event-title-wrapper {
@@ -878,7 +885,7 @@
         </div>
         <div class="header-btns-group">
           <button onclick="openRulesModal()" class="rules-trigger-btn" title="단체전 공식 규칙">📜 규칙</button>
-          <button onclick="openManualModal()" class="manual-trigger-btn" title="이용 설명서">📖</button>
+          <a href="manual.html" class="manual-trigger-btn" title="공식 종합 사용설명서 (화면 캡처 가이드)">📖 설명서</a>
         </div>
       </div>
 
@@ -1092,6 +1099,13 @@
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
         <h3 style="font-size: 15px; font-weight: 900; color: #1e293b;">📖 단체전 대회참여 매니저 가이드</h3>
         <button onclick="closeManualModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1.5px solid #86efac; padding: 10px 12px; border-radius: 10px; text-align: center; margin-bottom: 12px;">
+        <div style="font-weight: 900; color: #166534; font-size: 13px; margin-bottom: 5px;">📸 화면 캡처 포함 공식 종합 가이드북</div>
+        <a href="manual.html" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; background: var(--primary); color: #ffffff; text-decoration: none; font-weight: 900; font-size: 12px; padding: 6px 14px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+          📖 전체 사용설명서(manual.html) 열기 ➔
+        </a>
       </div>
       <div style="font-size: 12px; color: #334155; line-height: 1.6; max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
         <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border-left: 4px solid var(--primary);">
