@@ -864,8 +864,9 @@
       border-bottom: 1px solid #e2e8f0;
     }
     .rank-table th, .rank-table td {
-      padding: 8px 4px;
+      padding: 7px 3px;
       vertical-align: middle;
+      white-space: nowrap;
     }
     .rank-table tbody tr { border-bottom: 1px solid #f1f5f9; }
 
@@ -1415,12 +1416,12 @@
               <table class="rank-table">
                 <thead>
                   <tr>
-                    <th style="width: 42px;">순위</th>
+                    <th style="width: 38px;">순위</th>
                     <th style="text-align: left; padding-left: 8px;">선수명</th>
-                    <th style="width: 38px;">경기</th>
-                    <th style="width: 48px;">승-패</th>
-                    <th style="width: 44px;">득실</th>
-                    <th style="width: 44px;">승률</th>
+                    <th style="width: 34px;">경기</th>
+                    <th style="width: 58px; white-space: nowrap; letter-spacing: -0.5px;">승-양보</th>
+                    <th style="width: 38px;">득실</th>
+                    <th style="width: 40px;">승률</th>
                   </tr>
                 </thead>
                 <tbody id="rankTableBody"></tbody>
@@ -3219,13 +3220,13 @@
             <td style="font-weight: 900; text-align: center;">
               <div class="rank-circle ${groupLabel === 'B' ? 'circle-group-b' : ''}" onclick="showPartnerPopup(${r.originalIdx})" title="상세 기록 보기">${i + 1}</div>
             </td>
-            <td style="text-align: left; font-weight: 900; color: #0f172a; padding-left: 8px; font-size: 14px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <td style="text-align: left; font-weight: 900; color: #0f172a; padding-left: 6px; font-size: 13.5px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               <span class="pnum-tag ${groupLabel === 'B' ? 'tag-group-b' : ''}" style="margin-right: 3px;">${r.displayLabel}-</span>${r.name}
             </td>
-            <td style="color: #64748b;">${r.played}</td>
-            <td style="font-weight: 900; color: #0f172a;">${r.win}-${r.loss}</td>
-            <td style="font-weight: 900; color: ${r.diff >= 0 ? '#15803d' : '#e11d48'};">${r.diff > 0 ? '+'+r.diff : r.diff}</td>
-            <td style="color: #64748b;">${r.winRate}%</td>
+            <td style="color: #64748b; white-space: nowrap;">${r.played}</td>
+            <td style="font-weight: 900; color: #0f172a; white-space: nowrap; letter-spacing: -0.3px;">${r.win}-${r.loss}</td>
+            <td style="font-weight: 900; color: ${r.diff >= 0 ? '#15803d' : '#e11d48'}; white-space: nowrap;">${r.diff > 0 ? '+'+r.diff : r.diff}</td>
+            <td style="color: #64748b; white-space: nowrap;">${r.winRate}%</td>
           </tr>
         `).join('');
 
@@ -3234,12 +3235,12 @@
             <table class="rank-table">
               <thead>
                 <tr>
-                  <th style="width: 42px;">순위</th>
-                  <th style="text-align: left; padding-left: 8px;">선수명</th>
-                  <th style="width: 38px;">경기</th>
-                  <th style="width: 48px;">승-양보</th>
-                  <th style="width: 44px;">득실</th>
-                  <th style="width: 44px;">승률</th>
+                  <th style="width: 38px;">순위</th>
+                  <th style="text-align: left; padding-left: 6px;">선수명</th>
+                  <th style="width: 34px;">경기</th>
+                  <th style="width: 58px; white-space: nowrap; letter-spacing: -0.5px;">승-양보</th>
+                  <th style="width: 38px;">득실</th>
+                  <th style="width: 40px;">승률</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -3252,9 +3253,9 @@
         wrapper.innerHTML = buildTableHtml(data.standings);
       } else {
         wrapper.innerHTML = `
-          <div style="font-size: 14px; font-weight: 900; color: #15803d; margin: 4px 0 2px 2px;">🏆 A그룹 순위표</div>
+          <div style="font-size: 14px; font-weight: 900; color: #15803d; text-align: center; margin: 8px 0 4px 0;">🎾 A그룹 순위표</div>
           ${buildTableHtml(data.standingsA, 'A')}
-          <div style="font-size: 14px; font-weight: 900; color: #ea580c; margin: 8px 0 2px 2px;">🏆 B그룹 순위표</div>
+          <div style="font-size: 14px; font-weight: 900; color: #ea580c; text-align: center; margin: 12px 0 4px 0;">🎾 B그룹 순위표</div>
           ${buildTableHtml(data.standingsB, 'B')}
         `;
       }
