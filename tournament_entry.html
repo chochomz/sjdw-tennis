@@ -1148,7 +1148,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const CLUB_ID = "sejong-daewang-tennis-v1";
     const TOURNAMENT_STORAGE_KEY = 'sejong_tournament_entry_state_v1';
@@ -1169,6 +1169,139 @@
     let isRemoteUpdate = false;
     let syncDebounceTimer = null;
     let currentUserId = 'u_tour_' + Math.random().toString(36).substring(2, 9);
+
+    // --- [단체전 동시 입력 동기화 큐 및 트랜잭션 관리] ---
+    let pendingTourPlayerUpdates = {};
+    let pendingTourMatchUpdates = {};
+    let pendingTourTitleUpdate = null;
+    let tourPlayerSyncTimer = null;
+    let tourMatchSyncTimer = null;
+    let tourTitleSyncTimer = null;
+
+    function queueTourPlayerSync(team, isReserve, idx, val) {
+      if (!isCloudReady || !db) return;
+      const key = `${team}_${isReserve ? 'res' : 'play'}_${idx}`;
+      pendingTourPlayerUpdates[key] = { team, isReserve, idx, val };
+      if (tourPlayerSyncTimer) clearTimeout(tourPlayerSyncTimer);
+      tourPlayerSyncTimer = setTimeout(flushTourPlayerSync, 250);
+    }
+
+    async function flushTourPlayerSync() {
+      if (tourPlayerSyncTimer) { clearTimeout(tourPlayerSyncTimer); tourPlayerSyncTimer = null; }
+      const updates = { ...pendingTourPlayerUpdates };
+      pendingTourPlayerUpdates = {};
+      const keys = Object.keys(updates);
+      if (keys.length === 0 || !isCloudReady || !db) return;
+
+      try {
+        setSyncLamp('saving');
+        const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(docRef);
+          if (!snap.exists()) return;
+          const cloudData = snap.data();
+          const teams = cloudData.teams ? JSON.parse(JSON.stringify(cloudData.teams)) : {};
+          keys.forEach(k => {
+            const u = updates[k];
+            if (!teams[u.team]) teams[u.team] = createDefaultTeamState(cloudData.matchFormat || '3doubles');
+            if (u.isReserve) {
+              if (!teams[u.team].reserves) teams[u.team].reserves = ['', ''];
+              while (teams[u.team].reserves.length <= u.idx) teams[u.team].reserves.push('');
+              teams[u.team].reserves[u.idx] = u.val;
+            } else {
+              if (!teams[u.team].players) teams[u.team].players = [];
+              while (teams[u.team].players.length <= u.idx) teams[u.team].players.push('');
+              teams[u.team].players[u.idx] = u.val;
+            }
+          });
+          tx.update(docRef, { teams });
+        });
+        setSyncLamp('');
+      } catch (err) {
+        console.warn('Tour player sync transaction retry/fail:', err);
+        setSyncLamp('offline');
+      }
+    }
+
+    function queueTourMatchSync(team, roundKey, matchIdx, fieldUpdates) {
+      if (!isCloudReady || !db) return;
+      const key = `${team}_${roundKey}_${matchIdx !== null && matchIdx !== undefined ? matchIdx : 'club'}`;
+      if (!pendingTourMatchUpdates[key]) {
+        pendingTourMatchUpdates[key] = { team, roundKey, matchIdx, updates: {} };
+      }
+      Object.assign(pendingTourMatchUpdates[key].updates, fieldUpdates);
+      if (tourMatchSyncTimer) clearTimeout(tourMatchSyncTimer);
+      tourMatchSyncTimer = setTimeout(flushTourMatchSync, 250);
+    }
+
+    async function flushTourMatchSync() {
+      if (tourMatchSyncTimer) { clearTimeout(tourMatchSyncTimer); tourMatchSyncTimer = null; }
+      const batch = { ...pendingTourMatchUpdates };
+      pendingTourMatchUpdates = {};
+      const keys = Object.keys(batch);
+      if (keys.length === 0 || !isCloudReady || !db) return;
+
+      try {
+        setSyncLamp('saving');
+        const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(docRef);
+          if (!snap.exists()) return;
+          const cloudData = snap.data();
+          const teams = cloudData.teams ? JSON.parse(JSON.stringify(cloudData.teams)) : {};
+          keys.forEach(k => {
+            const item = batch[k];
+            const { team, roundKey, matchIdx, updates } = item;
+            if (!teams[team]) teams[team] = createDefaultTeamState(cloudData.matchFormat || '3doubles');
+            if (!teams[team].rounds) teams[team].rounds = {};
+            if (!teams[team].rounds[roundKey]) teams[team].rounds[roundKey] = createEmptyRoundData(cloudData.matchFormat || '3doubles');
+            const rData = teams[team].rounds[roundKey];
+
+            if (updates.opponentClub !== undefined) {
+              rData.opponentClub = updates.opponentClub;
+            }
+            if (matchIdx !== null && matchIdx !== undefined && rData.matches && rData.matches[matchIdx]) {
+              const m = rData.matches[matchIdx];
+              if (updates.scoreOur !== undefined) m.scoreOur = updates.scoreOur;
+              if (updates.scoreOpp !== undefined) m.scoreOpp = updates.scoreOpp;
+              if (updates.oppP1 !== undefined) m.oppP1 = updates.oppP1;
+              m.played = (m.scoreOur !== '' || m.scoreOpp !== '');
+            }
+          });
+          tx.update(docRef, { teams });
+        });
+        setSyncLamp('');
+      } catch (err) {
+        console.warn('Tour match sync transaction retry/fail:', err);
+        setSyncLamp('offline');
+      }
+    }
+
+    function queueTourTitleSync(title) {
+      if (!isCloudReady || !db) return;
+      pendingTourTitleUpdate = title;
+      if (tourTitleSyncTimer) clearTimeout(tourTitleSyncTimer);
+      tourTitleSyncTimer = setTimeout(flushTourTitleSync, 350);
+    }
+
+    async function flushTourTitleSync() {
+      if (tourTitleSyncTimer) { clearTimeout(tourTitleSyncTimer); tourTitleSyncTimer = null; }
+      if (pendingTourTitleUpdate === null || !isCloudReady || !db) return;
+      const title = pendingTourTitleUpdate;
+      pendingTourTitleUpdate = null;
+      try {
+        setSyncLamp('saving');
+        const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+        await updateDoc(docRef, { tournamentTitle: title });
+        setSyncLamp('');
+      } catch(e) {
+        console.warn('Tournament title sync error:', e);
+      }
+    }
+
+    async function flushAllTourPendingSync() {
+      await Promise.all([flushTourPlayerSync(), flushTourMatchSync(), flushTourTitleSync()]);
+    }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -1369,6 +1502,7 @@
 
     window.handleTournamentTitleInput = function(inputEl) {
       window.tourState.tournamentTitle = inputEl.value;
+      queueTourTitleSync(inputEl.value);
       saveTournamentState(false);
     };
 
@@ -1592,7 +1726,9 @@
 
     window.handleEntryPlayerInput = function(idx, val) {
       const teamData = getCurrentTeamData();
-      teamData.players[idx] = val.trim();
+      const cleanVal = val.trim();
+      teamData.players[idx] = cleanVal;
+      queueTourPlayerSync(window.tourState.currentTeam || 'A', false, idx, cleanVal);
       saveTournamentState(false);
       autoSyncPairsToMatches();
     };
@@ -1600,7 +1736,9 @@
     window.handleReservePlayerInput = function(reserveIdx, val) {
       const teamData = getCurrentTeamData();
       if (!teamData.reserves) teamData.reserves = ['', ''];
-      teamData.reserves[reserveIdx] = val.trim();
+      const cleanVal = val.trim();
+      teamData.reserves[reserveIdx] = cleanVal;
+      queueTourPlayerSync(window.tourState.currentTeam || 'A', true, reserveIdx, cleanVal);
       saveTournamentState(false);
     };
 
@@ -1773,13 +1911,17 @@
 
     window.handleOpponentClubChange = function(val) {
       const rData = getCurrentRoundData();
-      rData.opponentClub = val.trim();
+      const cleanVal = val.trim();
+      rData.opponentClub = cleanVal;
+      queueTourMatchSync(window.tourState.currentTeam || 'A', window.tourState.currentRound || 'pre1', null, { opponentClub: cleanVal });
       saveTournamentState(false);
     };
 
     window.handleOppPlayerInput = function(matchIdx, val) {
       const rData = getCurrentRoundData();
-      rData.matches[matchIdx].oppP1 = val.trim();
+      const cleanVal = val.trim();
+      rData.matches[matchIdx].oppP1 = cleanVal;
+      queueTourMatchSync(window.tourState.currentTeam || 'A', window.tourState.currentRound || 'pre1', matchIdx, { oppP1: cleanVal });
       saveTournamentState(false);
     };
 
@@ -1792,6 +1934,7 @@
       else m.scoreOpp = clean;
 
       m.played = (m.scoreOur !== '' || m.scoreOpp !== '');
+      queueTourMatchSync(window.tourState.currentTeam || 'A', window.tourState.currentRound || 'pre1', matchIdx, { scoreOur: m.scoreOur, scoreOpp: m.scoreOpp });
       saveTournamentState(false);
       renderMatchTab();
     };
@@ -2090,9 +2233,10 @@
     };
 
     window.saveTournamentEvent = async function() {
+      await flushAllTourPendingSync();
       const title = window.tourState.tournamentTitle || '단체전 대회';
       const dateStr = new Date().toLocaleDateString('ko-KR');
-      const docId = String(Date.now());
+      const docId = String(Date.now()) + '_' + Math.random().toString(36).substring(2, 6);
       const newArc = {
         id: docId,
         date: dateStr,
@@ -2320,7 +2464,30 @@
           };
 
           window.tourState.photos.unshift(newPhoto);
-          if (window.tourState.photos.length > 300) window.tourState.photos.pop();
+          if (window.tourState.photos.length > 20) window.tourState.photos = window.tourState.photos.slice(0, 20);
+
+          if (isCloudReady && db) {
+            (async () => {
+              try {
+                setSyncLamp('saving');
+                const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+                await runTransaction(db, async (tx) => {
+                  const snap = await tx.get(docRef);
+                  let curPhotos = [];
+                  if (snap.exists() && Array.isArray(snap.data().photos)) {
+                    curPhotos = snap.data().photos;
+                  }
+                  curPhotos.unshift(newPhoto);
+                  if (curPhotos.length > 20) curPhotos = curPhotos.slice(0, 20);
+                  tx.update(docRef, { photos: curPhotos });
+                });
+                setSyncLamp('');
+              } catch(err) {
+                console.warn('Tournament photo transaction error:', err);
+                setSyncLamp('offline');
+              }
+            })();
+          }
 
           saveTournamentState(true);
           renderPhotosGrid();
@@ -2338,6 +2505,30 @@
         if (typeof p === 'string') return ('old_' + idx) !== photoId;
         return p.id !== photoId;
       });
+
+      if (isCloudReady && db) {
+        (async () => {
+          try {
+            setSyncLamp('saving');
+            const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_live', 'current');
+            await runTransaction(db, async (tx) => {
+              const snap = await tx.get(docRef);
+              if (snap.exists() && Array.isArray(snap.data().photos)) {
+                let curPhotos = snap.data().photos.filter((p, idx) => {
+                  if (typeof p === 'string') return ('old_' + idx) !== photoId;
+                  return p.id !== photoId;
+                });
+                tx.update(docRef, { photos: curPhotos });
+              }
+            });
+            setSyncLamp('');
+          } catch(err) {
+            console.warn('Tournament photo delete transaction error:', err);
+            setSyncLamp('offline');
+          }
+        })();
+      }
+
       saveTournamentState(true);
       renderPhotosGrid();
       showToast('사진이 삭제되었습니다.');
@@ -2405,10 +2596,97 @@
             const cloudData = docSnap.data();
             if (cloudData) {
               isRemoteUpdate = true;
-              window.tourState = Object.assign(window.tourState, cloudData);
-              if (!window.tourState.photos) window.tourState.photos = [];
+              const activeEl = document.activeElement;
+              const activeId = activeEl ? activeEl.id : null;
+
+              if (cloudData.tournamentTitle !== undefined && activeId !== 'tournamentTitle') {
+                window.tourState.tournamentTitle = cloudData.tournamentTitle;
+                const titleInput = document.getElementById('tournamentTitle');
+                if (titleInput) titleInput.value = cloudData.tournamentTitle || '';
+              }
+
+              if (cloudData.matchFormat) window.tourState.matchFormat = cloudData.matchFormat;
+
+              if (Array.isArray(cloudData.photos)) {
+                window.tourState.photos = cloudData.photos;
+                const photosModal = document.getElementById('photosModal');
+                if (photosModal && photosModal.classList.contains('show')) {
+                  renderPhotosGrid();
+                }
+              }
+
+              if (cloudData.teams) {
+                if (!window.tourState.teams) window.tourState.teams = {};
+                ['A', 'B'].forEach(tKey => {
+                  const cTeam = cloudData.teams[tKey];
+                  if (!cTeam) return;
+                  if (!window.tourState.teams[tKey]) {
+                    window.tourState.teams[tKey] = createDefaultTeamState(window.tourState.matchFormat || '3doubles');
+                  }
+                  const lTeam = window.tourState.teams[tKey];
+
+                  if (Array.isArray(cTeam.players)) {
+                    cTeam.players.forEach((p, idx) => {
+                      if (activeId !== `entry-player-${idx}`) {
+                        lTeam.players[idx] = p;
+                        const el = document.getElementById(`entry-player-${idx}`);
+                        if (el && el.value !== p) el.value = p;
+                      }
+                    });
+                  }
+
+                  if (Array.isArray(cTeam.reserves)) {
+                    cTeam.reserves.forEach((r, idx) => {
+                      if (activeId !== `entry-reserve-${idx}`) {
+                        lTeam.reserves[idx] = r;
+                        const el = document.getElementById(`entry-reserve-${idx}`);
+                        if (el && el.value !== r) el.value = r;
+                      }
+                    });
+                  }
+
+                  if (cTeam.rounds) {
+                    if (!lTeam.rounds) lTeam.rounds = {};
+                    ROUND_KEYS.forEach(rk => {
+                      const cRound = cTeam.rounds[rk];
+                      if (!cRound) return;
+                      if (!lTeam.rounds[rk]) lTeam.rounds[rk] = createEmptyRoundData(window.tourState.matchFormat || '3doubles');
+                      const lRound = lTeam.rounds[rk];
+
+                      if (activeId !== 'opponentClubInput' || window.tourState.currentRound !== rk || window.tourState.currentTeam !== tKey) {
+                        lRound.opponentClub = cRound.opponentClub || '';
+                        if (window.tourState.currentRound === rk && window.tourState.currentTeam === tKey) {
+                          const oppEl = document.getElementById('opponentClubInput');
+                          if (oppEl && oppEl.value !== lRound.opponentClub) oppEl.value = lRound.opponentClub;
+                        }
+                      }
+
+                      if (Array.isArray(cRound.matches)) {
+                        cRound.matches.forEach((cm, mIdx) => {
+                          if (!lRound.matches[mIdx]) return;
+                          const lm = lRound.matches[mIdx];
+                          if (activeId !== `score-our-${mIdx}`) lm.scoreOur = cm.scoreOur;
+                          if (activeId !== `score-opp-${mIdx}`) lm.scoreOpp = cm.scoreOpp;
+                          if (activeId !== `opp-player-${mIdx}`) lm.oppP1 = cm.oppP1;
+                          lm.ourP1 = cm.ourP1;
+                          lm.ourP2 = cm.ourP2;
+                          lm.played = (lm.scoreOur !== '' || lm.scoreOpp !== '');
+                        });
+                      }
+                    });
+                  }
+                });
+              }
+
               initControlsFromState();
-              renderAllTabs();
+              const curTab = document.querySelector('.tab-btn.active')?.id.replace('tabBtn-', '') || 'match';
+              if (curTab === 'entry' && (!activeEl || !activeEl.classList.contains('entry-input'))) {
+                renderEntryTab();
+              } else if (curTab === 'match' && (!activeEl || (!activeEl.classList.contains('pair-score-input') && !activeEl.classList.contains('pair-input-inline') && activeId !== 'opponentClubInput'))) {
+                renderMatchTab();
+              } else if (curTab === 'summary') {
+                renderSummaryTab();
+              }
               isRemoteUpdate = false;
             }
           } else {
