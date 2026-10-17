@@ -1474,7 +1474,7 @@
             <button onclick="openArchiveModal()" class="btn-outline-mini-compact" title="저장된 대회 불러오기">
               📂 불러오기
             </button>
-            <button onclick="openPhotosModal()" class="btn-outline-mini-compact" style="border-color: #38bdf8; color: #0284c7; background: #f0f9ff;" title="사진 및 문서 등록/보기">
+            <button id="btnOpenPhotos" onclick="openPhotosModal()" class="btn-outline-mini-compact" style="border-color: #38bdf8; color: #0284c7; background: #f0f9ff;" title="사진 및 문서 등록/보기">
               📷 사진등록/보기
             </button>
             <button onclick="openPrizesModal()" class="btn-outline-mini-compact" style="border-color: #f59e0b; color: #b45309; background: #fffbeb;" title="오늘 대회 상품">
@@ -1768,7 +1768,7 @@
   <div id="photosModal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
-        <h3 style="font-size: 14px; font-weight: 900; color: #1e293b;">📷 사진 및 파일 등록 / 보기</h3>
+        <h3 id="photosModalTitle" style="font-size: 14px; font-weight: 900; color: #1e293b;">📷 사진 및 파일 등록 / 보기</h3>
         <button onclick="closePhotosModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
       </div>
 
@@ -1778,6 +1778,10 @@
           ➕ 파일선택
           <input type="file" id="photoFileInput" accept="image/*" multiple onchange="handlePhotoUpload(event)" style="display: none;" />
         </label>
+      </div>
+
+      <div id="photoSpectatorNotice" style="display: none; align-items: center; justify-content: center; margin-bottom: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 8px 10px; font-size: 11.5px; font-weight: 800; color: #166534; text-align: center;">
+        👀 개인모드: 등록된 사진 열람 가능 (사진 등록·삭제는 관리자 전용)
       </div>
 
       <div id="photosGrid" style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 4px;"></div>
@@ -2074,6 +2078,12 @@
       if (titleInput) titleInput.removeAttribute('readonly');
       const prizesInput = document.getElementById('eventPrizesInput');
       if (prizesInput) prizesInput.removeAttribute('readonly');
+
+      const photosBtn = document.getElementById('btnOpenPhotos');
+      if (photosBtn) {
+        photosBtn.innerHTML = isAdmin ? '📷 사진등록/보기' : '📷 사진보기';
+        photosBtn.title = isAdmin ? '사진 및 문서 등록/보기' : '등록된 사진 및 문서 보기';
+      }
     }
 
     window.openSyncInfoModal = function() { document.getElementById('syncInfoModal').classList.add('show'); };
@@ -2487,6 +2497,19 @@
     };
 
     window.openPhotosModal = function() {
+      const isAdmin = (window.currentUserRole === 'admin');
+      const titleEl = document.getElementById('photosModalTitle');
+      if (titleEl) {
+        titleEl.innerText = isAdmin ? '📷 사진 및 파일 등록 / 보기' : '📷 사진 및 파일 보기 (개인모드)';
+      }
+      const uploadRow = document.getElementById('photoUploadRow');
+      if (uploadRow) {
+        uploadRow.style.display = isAdmin ? 'flex' : 'none';
+      }
+      const noticeEl = document.getElementById('photoSpectatorNotice');
+      if (noticeEl) {
+        noticeEl.style.display = isAdmin ? 'none' : 'flex';
+      }
       renderPhotosGrid();
       document.getElementById('photosModal').classList.add('show');
     };
@@ -2543,13 +2566,15 @@
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px;">
         `;
 
+        const isAdmin = (window.currentUserRole === 'admin');
         dateGroups[dateKey].forEach(photo => {
           const photoUrl = photo.url || '';
           const photoId = photo.id;
+          const deleteBtn = isAdmin ? `<button type="button" onclick="event.stopPropagation(); deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.9); color: #ffffff; border: none; border-radius: 50%; width: 12px; height: 12px; font-size: 7px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4); padding: 0;" title="사진 삭제">✕</button>` : '';
           html += `
             <div style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #cbd5e1; background: #0f172a;">
               <img src="${photoUrl}" onclick="showPhotoLightbox('${photoUrl}')" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" />
-              <button type="button" onclick="event.stopPropagation(); deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.9); color: #ffffff; border: none; border-radius: 50%; width: 12px; height: 12px; font-size: 7px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4); padding: 0;" title="사진 삭제">✕</button>
+              ${deleteBtn}
             </div>
           `;
         });
@@ -2561,6 +2586,11 @@
     }
 
     window.handlePhotoUpload = async function(event) {
+      if (window.currentUserRole !== 'admin') {
+        showToast('💡 개인모드에서는 사진을 등록할 수 없습니다. (관리자 전용)');
+        if (event && event.target) event.target.value = '';
+        return;
+      }
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
 
@@ -2630,6 +2660,10 @@
 
     window.deletePhoto = function(photoId) {
       if (!photoId) return;
+      if (window.currentUserRole !== 'admin') {
+        showToast('💡 개인모드에서는 사진을 삭제할 수 없습니다. (관리자 전용)');
+        return;
+      }
       openConfirmModal(
         '사진 삭제',
         '선택한 사진을 삭제하시겠습니까?<br><span style="font-size:11.5px; color:#64748b; margin-top:4px; display:inline-block;">확인 버튼을 누르면 사진이 완전히 삭제됩니다.</span>',
