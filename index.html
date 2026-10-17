@@ -274,7 +274,7 @@
     }
 
     .club-title-text {
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 900;
       letter-spacing: -0.6px;
       white-space: nowrap;
@@ -864,9 +864,8 @@
       border-bottom: 1px solid #e2e8f0;
     }
     .rank-table th, .rank-table td {
-      padding: 7px 3px;
+      padding: 8px 4px;
       vertical-align: middle;
-      white-space: nowrap;
     }
     .rank-table tbody tr { border-bottom: 1px solid #f1f5f9; }
 
@@ -1416,12 +1415,12 @@
               <table class="rank-table">
                 <thead>
                   <tr>
-                    <th style="width: 38px;">순위</th>
+                    <th style="width: 42px;">순위</th>
                     <th style="text-align: left; padding-left: 8px;">선수명</th>
-                    <th style="width: 34px;">경기</th>
-                    <th style="width: 58px; white-space: nowrap; letter-spacing: -0.5px;">승-양보</th>
-                    <th style="width: 38px;">득실</th>
-                    <th style="width: 40px;">승률</th>
+                    <th style="width: 38px;">경기</th>
+                    <th style="width: 48px;">승-패</th>
+                    <th style="width: 44px;">득실</th>
+                    <th style="width: 44px;">승률</th>
                   </tr>
                 </thead>
                 <tbody id="rankTableBody"></tbody>
@@ -1653,13 +1652,13 @@
   </div>
 
   <!-- [모달: 확인 대화상자] -->
-  <div id="confirmModal" class="modal-backdrop" style="z-index: 70;">
+  <div id="confirmModal" class="modal-backdrop" style="z-index: 150;">
     <div class="modal-box" style="text-align: center; padding: 20px;">
       <h3 id="confirmTitle" style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 8px;"></h3>
       <p id="confirmMsg" style="font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.4;"></p>
       <div style="display: flex; gap: 8px; justify-content: center;">
         <button onclick="closeConfirmModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">취소</button>
-        <button onclick="executeConfirm()" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">진행하기</button>
+        <button id="confirmBtnOk" onclick="executeConfirm()" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">확인</button>
       </div>
     </div>
   </div>
@@ -1700,7 +1699,7 @@
         <span style="font-size: 11px; color: #475569; font-weight: 700;">사진 및 경기 파일 첨부 하세요.</span>
         <label id="photoUploadBtnLabel" style="background: var(--primary); color: #ffffff; font-size: 11.5px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
           ➕ 파일선택
-          <input type="file" id="photoFileInput" accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;" />
+          <input type="file" id="photoFileInput" accept="image/*" multiple onchange="handlePhotoUpload(event)" style="display: none;" />
         </label>
       </div>
 
@@ -1797,7 +1796,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const CLUB_ID = "sejong-daewang-tennis-v1";
     const LOCAL_STORAGE_KEY = "sejong_daewang_tennis_state_v1";
@@ -1822,115 +1821,6 @@
     let cachedArchives = [];
     const ARCHIVE_PAGE_SIZE = 10;
     let cloudOriginalState = null;
-
-    // --- [동시 입력 동기화 큐 및 트랜잭션 관리] ---
-    let pendingPlayerUpdates = {};
-    let pendingMatchScoreUpdates = {};
-    let pendingTitleUpdate = null;
-    let playerSyncTimer = null;
-    let matchScoreSyncTimer = null;
-    let titleSyncTimer = null;
-
-    function queuePlayerSync(idx, name) {
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) return;
-      pendingPlayerUpdates[idx] = name;
-      if (playerSyncTimer) clearTimeout(playerSyncTimer);
-      playerSyncTimer = setTimeout(flushPlayerSync, 250);
-    }
-
-    async function flushPlayerSync() {
-      if (playerSyncTimer) { clearTimeout(playerSyncTimer); playerSyncTimer = null; }
-      const updates = { ...pendingPlayerUpdates };
-      pendingPlayerUpdates = {};
-      const indices = Object.keys(updates);
-      if (indices.length === 0 || !isCloudReady || !db) return;
-
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(docRef);
-          if (!snap.exists()) return;
-          const cloudData = snap.data();
-          const pList = Array.isArray(cloudData.players) ? [...cloudData.players] : Array(window.state.count || 8).fill('');
-          indices.forEach(idx => {
-            const i = parseInt(idx, 10);
-            while (pList.length <= i) pList.push('');
-            pList[i] = updates[idx];
-          });
-          tx.update(docRef, { players: pList });
-        });
-        setSyncLamp('');
-      } catch (err) {
-        console.warn('Player sync transaction retry/fail:', err);
-        setSyncLamp('offline');
-      }
-    }
-
-    function queueMatchScoreSync(matchId, s1, s2) {
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) return;
-      pendingMatchScoreUpdates[matchId] = { s1: parseInt(s1, 10) || 0, s2: parseInt(s2, 10) || 0 };
-      if (matchScoreSyncTimer) clearTimeout(matchScoreSyncTimer);
-      matchScoreSyncTimer = setTimeout(flushMatchScoreSync, 250);
-    }
-
-    async function flushMatchScoreSync() {
-      if (matchScoreSyncTimer) { clearTimeout(matchScoreSyncTimer); matchScoreSyncTimer = null; }
-      const updates = { ...pendingMatchScoreUpdates };
-      pendingMatchScoreUpdates = {};
-      const matchIds = Object.keys(updates);
-      if (matchIds.length === 0 || !isCloudReady || !db) return;
-
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(docRef);
-          if (!snap.exists()) return;
-          const cloudData = snap.data();
-          const mList = Array.isArray(cloudData.matches) ? JSON.parse(JSON.stringify(cloudData.matches)) : [];
-          matchIds.forEach(mIdStr => {
-            const mId = parseInt(mIdStr, 10);
-            const targetM = mList.find(m => m.id === mId);
-            if (targetM) {
-              targetM.s1 = updates[mIdStr].s1;
-              targetM.s2 = updates[mIdStr].s2;
-            }
-          });
-          tx.update(docRef, { matches: mList });
-        });
-        setSyncLamp('');
-      } catch (err) {
-        console.warn('Match score sync transaction retry/fail:', err);
-        setSyncLamp('offline');
-      }
-    }
-
-    function queueTitleSync(title) {
-      if (window.currentUserRole !== 'admin' || !isCloudReady || !db) return;
-      pendingTitleUpdate = title;
-      if (titleSyncTimer) clearTimeout(titleSyncTimer);
-      titleSyncTimer = setTimeout(flushTitleSync, 350);
-    }
-
-    async function flushTitleSync() {
-      if (titleSyncTimer) { clearTimeout(titleSyncTimer); titleSyncTimer = null; }
-      if (pendingTitleUpdate === null || !isCloudReady || !db) return;
-      const titleToSave = pendingTitleUpdate;
-      pendingTitleUpdate = null;
-      try {
-        setSyncLamp('saving');
-        const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-        await updateDoc(docRef, { eventTitle: titleToSave });
-        setSyncLamp('');
-      } catch(e) {
-        console.warn('Title update error:', e);
-      }
-    }
-
-    async function flushAllPendingSync() {
-      await Promise.all([flushPlayerSync(), flushMatchScoreSync(), flushTitleSync()]);
-    }
 
     window.currentUserRole = 'spectator';
 
@@ -2200,9 +2090,6 @@
     window.handleEventTitleInput = function(inputEl) {
       const val = inputEl.value;
       window.state.eventTitle = val;
-      if (window.currentUserRole === 'admin') {
-        queueTitleSync(val);
-      }
       saveState(false);
     }
 
@@ -2414,29 +2301,36 @@
 
     window.updatePlayerName = function(idx, val) {
       window.state.players[idx] = val;
-      if (window.currentUserRole === 'admin') {
-        queuePlayerSync(idx, val);
-      }
       saveState(false);
       if (window.state.currentTab === 'matches') renderMatches();
       if (window.state.currentTab === 'results') renderResults();
     }
 
     let confirmAction = null;
-    window.openConfirmModal = function(title, msg, onConfirm) {
-      document.getElementById('confirmTitle').innerText = title;
-      document.getElementById('confirmMsg').innerHTML = msg;
+    window.openConfirmModal = function(title, msg, onConfirm, okText = '확인', okColor = '') {
+      const tEl = document.getElementById('confirmTitle');
+      const mEl = document.getElementById('confirmMsg');
+      const bEl = document.getElementById('confirmBtnOk') || document.querySelector('#confirmModal button:last-child');
+      if (tEl) tEl.innerText = title;
+      if (mEl) mEl.innerHTML = msg;
+      if (bEl) {
+        bEl.innerText = okText;
+        if (okColor) bEl.style.backgroundColor = okColor;
+        else bEl.style.backgroundColor = 'var(--primary)';
+      }
       confirmAction = onConfirm;
-      document.getElementById('confirmModal').classList.add('show');
-    }
+      const modal = document.getElementById('confirmModal');
+      if (modal) modal.classList.add('show');
+    };
     window.closeConfirmModal = function() {
-      document.getElementById('confirmModal').classList.remove('show');
+      const modal = document.getElementById('confirmModal');
+      if (modal) modal.classList.remove('show');
       confirmAction = null;
-    }
+    };
     window.executeConfirm = function() {
       if (confirmAction) confirmAction();
       closeConfirmModal();
-    }
+    };
 
     window.openPhotosModal = function() {
       renderPhotosGrid();
@@ -2446,12 +2340,21 @@
       document.getElementById('photosModal').classList.remove('show');
     };
 
-    function getNormalizedPhotos() {
-      if (!window.state.photos) return [];
-      return window.state.photos.map((item, idx) => {
+    function normalizePhotosList(photos) {
+      if (!Array.isArray(photos)) return [];
+      return photos.map((item, idx) => {
         if (typeof item === 'string') {
-          return { id: 'old_' + idx, url: item, date: '이전 등록 사진', timestamp: 0 };
+          return {
+            id: 'p_legacy_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+            url: item,
+            date: '이전 등록 사진',
+            timestamp: Date.now() + idx
+          };
         }
+        if (!item.id) {
+          item.id = 'p_' + (item.timestamp || Date.now()) + '_' + idx + '_' + Math.random().toString(36).substring(2, 7);
+        }
+        if (!item.date) item.date = '기타';
         return item;
       });
     }
@@ -2460,7 +2363,9 @@
       const container = document.getElementById('photosGrid');
       if (!container) return;
 
-      const photos = getNormalizedPhotos();
+      window.state.photos = normalizePhotosList(window.state.photos);
+      const photos = window.state.photos;
+
       if (photos.length === 0) {
         container.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0;">등록된 사진이나 문서가 없습니다.</div>`;
         return;
@@ -2485,12 +2390,12 @@
         `;
 
         dateGroups[dateKey].forEach(photo => {
-          const photoUrl = photo.url || photo;
-          const photoId = photo.id || '';
+          const photoUrl = photo.url || '';
+          const photoId = photo.id;
           html += `
             <div style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #cbd5e1; background: #0f172a;">
               <img src="${photoUrl}" onclick="showPhotoLightbox('${photoUrl}')" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" />
-              <button onclick="deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.88); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">✕</button>
+              <button type="button" onclick="event.stopPropagation(); deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.9); color: #ffffff; border: none; border-radius: 50%; width: 15px; height: 15px; font-size: 8.5px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4); padding: 0;" title="사진 삭제">✕</button>
             </div>
           `;
         });
@@ -2501,117 +2406,93 @@
       container.innerHTML = html;
     }
 
-    window.handlePhotoUpload = function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    window.handlePhotoUpload = async function(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 800;
+      const processFile = (file, idx) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const maxDim = 800;
 
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.72);
-          if (!window.state.photos) window.state.photos = [];
-
-          const now = new Date();
-          const days = ['일', '월', '화', '수', '목', '금', '토'];
-          const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}(${days[now.getDay()]})`;
-
-          const newPhoto = {
-            id: 'p_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-            url: compressedBase64,
-            date: dateStr,
-            timestamp: Date.now()
-          };
-
-          window.state.photos.unshift(newPhoto);
-          if (window.state.photos.length > 15) window.state.photos = window.state.photos.slice(0, 15);
-
-          if (window.currentUserRole === 'admin' && isCloudReady && db) {
-            (async () => {
-              try {
-                setSyncLamp('saving');
-                const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-                await runTransaction(db, async (tx) => {
-                  const snap = await tx.get(docRef);
-                  let curPhotos = [];
-                  if (snap.exists() && Array.isArray(snap.data().photos)) {
-                    curPhotos = snap.data().photos;
-                  }
-                  curPhotos.unshift(newPhoto);
-                  if (curPhotos.length > 15) curPhotos = curPhotos.slice(0, 15);
-                  tx.update(docRef, { photos: curPhotos });
-                });
-                setSyncLamp('');
-              } catch(err) {
-                console.warn('Photo cloud transaction error:', err);
-                setSyncLamp('offline');
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
               }
-            })();
-          }
 
-          saveState(true);
-          renderPhotosGrid();
-          showToast('사진이 등록되었습니다.');
-          event.target.value = '';
-        };
-        img.src = e.target.result;
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.72);
+              const now = new Date();
+              const days = ['일', '월', '화', '수', '목', '금', '토'];
+              const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}(${days[now.getDay()]})`;
+
+              resolve({
+                id: 'p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+                url: compressedBase64,
+                date: dateStr,
+                timestamp: Date.now() + idx
+              });
+            };
+            img.onerror = () => resolve(null);
+            img.src = e.target.result;
+          };
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
       };
-      reader.readAsDataURL(file);
+
+      const results = await Promise.all(files.map((file, idx) => processFile(file, idx)));
+      const newPhotos = results.filter(p => p !== null);
+      if (newPhotos.length === 0) {
+        event.target.value = '';
+        return;
+      }
+
+      if (!window.state.photos) window.state.photos = [];
+      window.state.photos = normalizePhotosList(window.state.photos);
+      window.state.photos = [...newPhotos, ...window.state.photos];
+      if (window.state.photos.length > 25) window.state.photos = window.state.photos.slice(0, 25);
+
+      saveState(true);
+      renderPhotosGrid();
+      showToast(`${newPhotos.length}장의 사진이 등록되었습니다.`);
+      event.target.value = '';
     };
 
     window.deletePhoto = function(photoId) {
-      openConfirmModal('사진 삭제', '이 사진을 목록에서 삭제하시겠습니까?', async () => {
-        if (!window.state.photos) return;
-        window.state.photos = window.state.photos.filter((p, idx) => {
-          if (typeof p === 'string') return ('old_' + idx) !== photoId;
-          return p.id !== photoId;
-        });
-
-        if (window.currentUserRole === 'admin' && isCloudReady && db) {
-          try {
-            setSyncLamp('saving');
-            const docRef = doc(db, 'clubs', CLUB_ID, 'live', 'current');
-            await runTransaction(db, async (tx) => {
-              const snap = await tx.get(docRef);
-              if (snap.exists() && Array.isArray(snap.data().photos)) {
-                let curPhotos = snap.data().photos.filter((p, idx) => {
-                  if (typeof p === 'string') return ('old_' + idx) !== photoId;
-                  return p.id !== photoId;
-                });
-                tx.update(docRef, { photos: curPhotos });
-              }
-            });
-            setSyncLamp('');
-          } catch(err) {
-            console.warn('Photo delete transaction error:', err);
-            setSyncLamp('offline');
+      if (!photoId) return;
+      openConfirmModal(
+        '사진 삭제',
+        '선택한 사진을 삭제하시겠습니까?<br><span style="font-size:11.5px; color:#64748b; margin-top:4px; display:inline-block;">확인 버튼을 누르면 사진이 완전히 삭제됩니다.</span>',
+        () => {
+          if (!window.state.photos) return;
+          window.state.photos = normalizePhotosList(window.state.photos);
+          const targetIdx = window.state.photos.findIndex(p => p && p.id === photoId);
+          if (targetIdx !== -1) {
+            window.state.photos.splice(targetIdx, 1);
           }
-        }
-
-        saveState(true);
-        renderPhotosGrid();
-        showToast('사진이 삭제되었습니다.');
-      });
+          saveState(true);
+          renderPhotosGrid();
+          showToast('사진이 삭제되었습니다.');
+        },
+        '확인',
+        '#e11d48'
+      );
     };
 
     window.showPhotoLightbox = function(src) {
@@ -3086,9 +2967,6 @@
         }
       }
 
-      if (window.currentUserRole === 'admin') {
-        queueMatchScoreSync(m.id, m.s1, m.s2);
-      }
       saveState(false);
       updateStats();
     };
@@ -3220,13 +3098,13 @@
             <td style="font-weight: 900; text-align: center;">
               <div class="rank-circle ${groupLabel === 'B' ? 'circle-group-b' : ''}" onclick="showPartnerPopup(${r.originalIdx})" title="상세 기록 보기">${i + 1}</div>
             </td>
-            <td style="text-align: left; font-weight: 900; color: #0f172a; padding-left: 6px; font-size: 13.5px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <td style="text-align: left; font-weight: 900; color: #0f172a; padding-left: 8px; font-size: 14px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               <span class="pnum-tag ${groupLabel === 'B' ? 'tag-group-b' : ''}" style="margin-right: 3px;">${r.displayLabel}-</span>${r.name}
             </td>
-            <td style="color: #64748b; white-space: nowrap;">${r.played}</td>
-            <td style="font-weight: 900; color: #0f172a; white-space: nowrap; letter-spacing: -0.3px;">${r.win}-${r.loss}</td>
-            <td style="font-weight: 900; color: ${r.diff >= 0 ? '#15803d' : '#e11d48'}; white-space: nowrap;">${r.diff > 0 ? '+'+r.diff : r.diff}</td>
-            <td style="color: #64748b; white-space: nowrap;">${r.winRate}%</td>
+            <td style="color: #64748b;">${r.played}</td>
+            <td style="font-weight: 900; color: #0f172a;">${r.win}-${r.loss}</td>
+            <td style="font-weight: 900; color: ${r.diff >= 0 ? '#15803d' : '#e11d48'};">${r.diff > 0 ? '+'+r.diff : r.diff}</td>
+            <td style="color: #64748b;">${r.winRate}%</td>
           </tr>
         `).join('');
 
@@ -3235,12 +3113,12 @@
             <table class="rank-table">
               <thead>
                 <tr>
-                  <th style="width: 38px;">순위</th>
-                  <th style="text-align: left; padding-left: 6px;">선수명</th>
-                  <th style="width: 34px;">경기</th>
-                  <th style="width: 58px; white-space: nowrap; letter-spacing: -0.5px;">승-양보</th>
-                  <th style="width: 38px;">득실</th>
-                  <th style="width: 40px;">승률</th>
+                  <th style="width: 42px;">순위</th>
+                  <th style="text-align: left; padding-left: 8px;">선수명</th>
+                  <th style="width: 38px;">경기</th>
+                  <th style="width: 48px;">승-양보</th>
+                  <th style="width: 44px;">득실</th>
+                  <th style="width: 44px;">승률</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -3253,9 +3131,9 @@
         wrapper.innerHTML = buildTableHtml(data.standings);
       } else {
         wrapper.innerHTML = `
-          <div style="font-size: 14px; font-weight: 900; color: #15803d; text-align: center; margin: 8px 0 4px 0;">🎾 A그룹 순위표</div>
+          <div style="font-size: 14px; font-weight: 900; color: #15803d; margin: 4px 0 2px 2px;">🏆 A그룹 순위표</div>
           ${buildTableHtml(data.standingsA, 'A')}
-          <div style="font-size: 14px; font-weight: 900; color: #ea580c; text-align: center; margin: 12px 0 4px 0;">🎾 B그룹 순위표</div>
+          <div style="font-size: 14px; font-weight: 900; color: #ea580c; margin: 8px 0 2px 2px;">🏆 B그룹 순위표</div>
           ${buildTableHtml(data.standingsB, 'B')}
         `;
       }
@@ -3412,12 +3290,11 @@
     }
 
     async function saveCurrentEvent() {
-      await flushAllPendingSync();
       const titleInput = document.getElementById('eventTitle');
       const title = (titleInput && titleInput.value.trim()) || (window.state.eventTitle && window.state.eventTitle.trim()) || '대회';
       const now = new Date();
       const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-      const docId = String(Date.now()) + '_' + Math.random().toString(36).substring(2, 6);
+      const docId = String(Date.now());
       
       const newArchive = {
         id: docId,
@@ -3844,60 +3721,19 @@
               }
 
               isRemoteUpdate = true;
-              const activeEl = document.activeElement;
-              const activeId = activeEl ? activeEl.id : null;
+              window.state = Object.assign(window.state, cloudData);
+              if (!window.state.photos) window.state.photos = [];
+              if (!window.state.groupAConfig) window.state.groupAConfig = '5_4g';
+              if (!window.state.groupBConfig) window.state.groupBConfig = '4_3g';
 
-              // Partial merge preserving locally focused inputs
-              if (cloudData.eventTitle !== undefined && activeId !== 'eventTitle') {
-                window.state.eventTitle = cloudData.eventTitle;
-                const titleInput = document.getElementById('eventTitle');
-                if (titleInput) titleInput.value = cloudData.eventTitle || '';
+              const titleInput = document.getElementById('eventTitle');
+              if (titleInput && window.state.eventTitle) {
+                titleInput.value = window.state.eventTitle;
               }
-
-              if (Array.isArray(cloudData.players)) {
-                if (!window.state.players) window.state.players = [];
-                cloudData.players.forEach((p, idx) => {
-                  const inputId = `player-input-${idx}`;
-                  if (activeId !== inputId) {
-                    window.state.players[idx] = p;
-                    const inp = document.getElementById(inputId);
-                    if (inp && inp.value !== p) inp.value = p;
-                  }
-                });
-              }
-
-              if (Array.isArray(cloudData.matches)) {
-                if (!window.state.matches) window.state.matches = [];
-                cloudData.matches.forEach((cm) => {
-                  const localM = window.state.matches.find(m => m.id === cm.id);
-                  if (localM) {
-                    const matchIndex = window.state.matches.indexOf(localM);
-                    if (activeId !== `score-${matchIndex}-1`) localM.s1 = cm.s1;
-                    if (activeId !== `score-${matchIndex}-2`) localM.s2 = cm.s2;
-                  }
-                });
-              }
-
-              if (Array.isArray(cloudData.photos)) {
-                window.state.photos = cloudData.photos;
-                const photoModal = document.getElementById('photosModal');
-                if (photoModal && photoModal.classList.contains('show')) {
-                  renderPhotosGrid();
-                }
-              }
-
-              if (cloudData.kdkVersion) window.state.kdkVersion = cloudData.kdkVersion;
-              if (cloudData.count) window.state.count = cloudData.count;
-              if (cloudData.groupAConfig) window.state.groupAConfig = cloudData.groupAConfig;
-              if (cloudData.groupBConfig) window.state.groupBConfig = cloudData.groupBConfig;
-              if (cloudData.prizes !== undefined) window.state.prizes = cloudData.prizes;
-
-              applyTheme(cloudData.theme || window.state.theme || 'summer');
-
-              if (!activeEl || !activeEl.classList.contains('player-slot-input')) {
-                renderPlayerInputs(false);
-              }
+              applyTheme(window.state.theme || 'summer');
+              renderPlayerInputs(false);
               
+              const activeEl = document.activeElement;
               if (!activeEl || !activeEl.classList.contains('score-input')) {
                 renderMatches();
               } else {
