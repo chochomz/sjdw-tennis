@@ -1089,8 +1089,43 @@
     </div>
   </div>
 
-  <div id="archiveModal" class="modal-backdrop">
-    <div class="modal-box" style="max-width: 360px;">
+    <!-- [모달: 대회 저장 및 최종 전적 확인] -->
+  <div id="saveStandingModal" class="modal-backdrop" style="z-index: 160;">
+    <div class="modal-box" style="text-align: center; padding: 20px; max-width: 360px;">
+      <h3 style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 6px;">🏆 대회 저장 &amp; 최종 성적</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 14px; line-height: 1.4;">
+        이번 대회의 최종 성적을 확인하고 저장하세요.
+      </p>
+
+      <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 16px; text-align: left;">
+        <div style="font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 3px;">대회명</div>
+        <div id="saveStandingTitleDisplay" style="font-size: 13.5px; font-weight: 900; color: #0f172a; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+          <span style="font-size: 11.5px; font-weight: 900; color: #334155;">최종 전적 (성적)</span>
+          <span id="saveStandingAutoBadge" style="font-size: 10px; font-weight: 800; color: var(--primary); background: var(--primary-light); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-accent);">자동추천</span>
+        </div>
+        <select id="saveStandingSelect" style="width: 100%; background: #ffffff; border: 1.5px solid var(--primary); font-weight: 900; color: #0f172a; font-size: 13.5px; border-radius: 8px; padding: 8px 6px; outline: none; cursor: pointer; text-align: center; text-align-last: center;">
+          <option value="우승">🏆 우승 (Champion)</option>
+          <option value="준우승">🥈 준우승 (Runner-up)</option>
+          <option value="4강">🎾 4강 (준결승)</option>
+          <option value="8강">🎾 8강 (준준결)</option>
+          <option value="16강">🎾 16강 (본선)</option>
+          <option value="32강">🎾 32강 (본선)</option>
+          <option value="예선">🎾 예선 (리그)</option>
+          <option value="대회참가">🎾 대회참가</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 8px; justify-content: center;">
+        <button onclick="closeSaveStandingModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">취소</button>
+        <button onclick="confirmSaveTournamentEvent()" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">예, 저장하기</button>
+      </div>
+    </div>
+  </div>
+
+<div id="archiveModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 380px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
         <h3 style="font-size: 14px; font-weight: 900; color: #1e293b;">📂 저장된 단체전 대회 목록</h3>
         <button onclick="closeArchiveModal()" style="border: none; background: none; font-size: 18px; color: #94a3b8; cursor: pointer;">✕</button>
@@ -2225,7 +2260,93 @@
     }
     window.executeResetTournament = executeResetTournament;
 
-    window.saveTournamentEvent = async function() {
+    function detectHighestStanding(teamKey = null) {
+      const tKey = teamKey || window.tourState.currentTeam || 'A';
+      const teamData = window.tourState.teams && window.tourState.teams[tKey];
+      if (!teamData || !teamData.rounds) return '대회참가';
+
+      const rounds = teamData.rounds;
+      const format = window.tourState.matchFormat || '3doubles';
+      const pairCount = format === '5doubles' ? 5 : 3;
+      const winThreshold = Math.ceil(pairCount / 2);
+
+      function getRoundStatus(rk) {
+        const rData = rounds[rk];
+        if (!rData || !rData.matches) return 'none';
+        let ourW = 0, oppW = 0, played = false;
+        rData.matches.slice(0, pairCount).forEach(m => {
+          if (m.played) {
+            played = true;
+            const sOur = parseInt(m.scoreOur || 0, 10);
+            const sOpp = parseInt(m.scoreOpp || 0, 10);
+            if (sOur > sOpp) ourW++;
+            else if (sOpp > sOur) oppW++;
+          }
+        });
+        if (ourW >= winThreshold || rData.tieWon) return 'won';
+        if (oppW >= winThreshold) return 'lost';
+        if (played) return 'played';
+        return 'none';
+      }
+
+      const finalStatus = getRoundStatus('final');
+      if (finalStatus === 'won') return '우승';
+      if (finalStatus === 'lost' || finalStatus === 'played') return '준우승';
+
+      const r4Status = getRoundStatus('r4');
+      if (r4Status === 'won') return '준우승';
+      if (r4Status === 'lost' || r4Status === 'played') return '4강';
+
+      const r8Status = getRoundStatus('r8');
+      if (r8Status === 'won') return '4강';
+      if (r8Status === 'lost' || r8Status === 'played') return '8강';
+
+      const r16Status = getRoundStatus('r16');
+      if (r16Status === 'won') return '8강';
+      if (r16Status === 'lost' || r16Status === 'played') return '16강';
+
+      const r32Status = getRoundStatus('r32');
+      if (r32Status === 'won') return '16강';
+      if (r32Status === 'lost' || r32Status === 'played') return '32강';
+
+      const pre3Status = getRoundStatus('pre3');
+      const pre2Status = getRoundStatus('pre2');
+      const pre1Status = getRoundStatus('pre1');
+      if (pre3Status !== 'none' || pre2Status !== 'none' || pre1Status !== 'none') {
+        return '예선';
+      }
+
+      return '대회참가';
+    }
+    window.detectHighestStanding = detectHighestStanding;
+
+    window.saveTournamentEvent = function() {
+      const title = window.tourState.tournamentTitle || '단체전 대회';
+      const autoStanding = detectHighestStanding();
+
+      const titleEl = document.getElementById('saveStandingTitleDisplay');
+      if (titleEl) titleEl.innerText = title;
+
+      const sel = document.getElementById('saveStandingSelect');
+      if (sel) {
+        sel.value = autoStanding;
+      }
+
+      const modal = document.getElementById('saveStandingModal');
+      if (modal) modal.classList.add('show');
+    };
+
+    window.closeSaveStandingModal = function() {
+      const modal = document.getElementById('saveStandingModal');
+      if (modal) modal.classList.remove('show');
+    };
+
+    window.confirmSaveTournamentEvent = async function() {
+      const sel = document.getElementById('saveStandingSelect');
+      const standing = (sel && sel.value) ? sel.value : detectHighestStanding();
+
+      closeSaveStandingModal();
+
       const title = window.tourState.tournamentTitle || '단체전 대회';
       const dateStr = new Date().toLocaleDateString('ko-KR');
       const docId = String(Date.now());
@@ -2233,6 +2354,7 @@
         id: docId,
         date: dateStr,
         title: title,
+        standing: standing,
         data: JSON.parse(JSON.stringify(window.tourState))
       };
 
@@ -2248,14 +2370,28 @@
           const docRef = doc(db, 'clubs', CLUB_ID, 'tournament_archives', docId);
           await setDoc(docRef, newArc);
           setSyncLamp('');
-          showToast(`[${title}] 파이어베이스 클라우드 저장 완료!`);
+          showToast(`[${title}] '${standing}' 성적으로 클라우드 저장 완료!`);
           return;
         } catch(e) {
           console.warn("Cloud save archive error:", e);
         }
       }
-      showToast(`[${title}] 전적이 로컬에 저장되었습니다!`);
+      showToast(`[${title}] '${standing}' 성적으로 저장 완료!`);
     };
+
+    function getStandingBadgeStyle(standing) {
+      if (!standing) return { bg: '#64748b', text: '-' };
+      const s = String(standing).trim();
+      if (s.includes('우승') && !s.includes('준')) {
+        return { bg: '#d97706', text: s };
+      } else if (s.includes('준우승')) {
+        return { bg: '#0284c7', text: s };
+      } else if (s.includes('4강') || s.includes('8강') || s.includes('16강') || s.includes('32강')) {
+        return { bg: 'var(--primary)', text: s };
+      } else {
+        return { bg: '#64748b', text: s };
+      }
+    }
 
     window.openArchiveModal = async function() {
       const modal = document.getElementById('archiveModal');
@@ -2287,8 +2423,14 @@
       if (arcs.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 20px 0;">저장된 단체전 기록이 없습니다.</div>';
       } else {
-        container.innerHTML = arcs.map(arc => `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc;">
+        container.innerHTML = arcs.map(arc => {
+          const st = arc.standing || '참가';
+          const badgeStyle = getStandingBadgeStyle(st);
+          return `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; gap: 8px;">
+            <div style="flex-shrink: 0; min-width: 44px; text-align: center; background: ${badgeStyle.bg}; color: #ffffff; font-size: 11px; font-weight: 900; padding: 5px 6px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">
+              ${badgeStyle.text}
+            </div>
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 13px; font-weight: 900; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${arc.title}</div>
               <div style="font-size: 10.5px; color: #64748b;">${arc.date}</div>
@@ -2298,7 +2440,8 @@
               <button onclick="deleteTournamentArchive('${arc.id}')" style="background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; cursor: pointer;">삭제</button>
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       }
     };
     window.closeArchiveModal = function() { document.getElementById('archiveModal').classList.remove('show'); };
