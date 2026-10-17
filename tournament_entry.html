@@ -173,10 +173,7 @@
       gap: 4px;
     }
     .club-title-left {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      flex-shrink: 0;
+      display: none;
     }
     .club-title-center {
       flex: 1;
@@ -205,9 +202,9 @@
     }
 
     .club-title-text {
-      font-size: 17px;
+      font-size: 19px;
       font-weight: 900;
-      letter-spacing: -0.6px;
+      letter-spacing: -1px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -832,9 +829,10 @@
 
       <!-- 상단 타이틀 바: 중앙 정렬 클럽명 + 우측 규칙/이용가이드 -->
       <div class="club-title">
-        <div class="club-title-left">
+        <div class="club-title-left"></div>
+        <div class="club-title-center">
           <button onclick="openThemeModal()" class="theme-trigger-btn" title="테마 변경">
-            <svg width="30" height="30" viewBox="0 0 50 50" style="overflow: visible;">
+            <svg width="32" height="32" viewBox="0 0 50 50" style="overflow: visible;">
               <g class="anim-racket" transform-origin="25px 35px">
                 <ellipse cx="25" cy="15" rx="9.5" ry="13.5" fill="none" stroke="currentColor" stroke-width="2.6"/>
                 <line x1="25" y1="28.5" x2="25" y2="46" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>
@@ -846,8 +844,6 @@
               <circle class="anim-ball" cx="25" cy="15" r="4.8" fill="var(--accent)" />
             </svg>
           </button>
-        </div>
-        <div class="club-title-center">
           <span class="club-title-text">세종 대왕테니스 클럽</span>
         </div>
         <div class="header-btns-group">
@@ -1119,18 +1115,6 @@
     </div>
   </div>
 
-  <!-- [모달: 확인 대화상자] -->
-  <div id="confirmModal" class="modal-backdrop" style="z-index: 150;">
-    <div class="modal-box" style="text-align: center; padding: 20px;">
-      <h3 id="confirmTitle" style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 8px;"></h3>
-      <p id="confirmMsg" style="font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.4;"></p>
-      <div style="display: flex; gap: 8px; justify-content: center;">
-        <button onclick="closeConfirmModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">취소</button>
-        <button id="confirmBtnOk" onclick="executeConfirm()" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">확인</button>
-      </div>
-    </div>
-  </div>
-
   <div id="captureOverlay" class="capture-overlay">
     <div class="capture-topbar">
       <span>📸 이 화면을 캡처하여 클럽 회원들과 공유하세요</span>
@@ -1139,21 +1123,46 @@
     <div id="captureContent" class="capture-scroll"></div>
   </div>
 
+    <!-- [모달: 확인 대화상자] -->
+  <div id="confirmModal" class="modal-backdrop" style="z-index: 150;">
+    <div class="modal-box" style="text-align: center; padding: 20px;">
+      <h3 id="confirmTitle" style="font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 8px;"></h3>
+      <p id="confirmMsg" style="font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.4;"></p>
+      <div style="display: flex; gap: 8px; justify-content: center;">
+        <button onclick="closeConfirmModal()" style="flex: 1; padding: 10px; border-radius: 8px; background: #f1f5f9; color: #475569; font-weight: 800; border: none; cursor: pointer;">취소</button>
+        <button onclick="executeConfirm()" id="confirmOkBtn" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--primary); color: #ffffff; font-weight: 800; border: none; cursor: pointer;">진행하기</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast-msg">알림 메시지</div>
 
+  <!-- [모달: 감성 시] -->
   <div id="poemModal" class="modal-backdrop">
-    <div class="modal-box" style="background: linear-gradient(145deg, #091322, #172554 60%, #1e1b4b); color: #ffffff; border: 1.5px solid rgba(255, 255, 255, 0.25); text-align: center; position: relative; overflow: hidden; padding: 22px 20px 18px; border-radius: 18px; max-width: 360px;">
-      <div style="font-size: 10px; letter-spacing: 2px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; margin-bottom: 4px; font-weight: 700;">Tennis & Together</div>
-      <h3 style="font-size: 16px; font-weight: 900; color: #ffffff; margin-bottom: 12px; letter-spacing: -0.2px;">
-        - 단체전, 함께 뛰는 코트의 시 -
+    <div class="modal-box" style="background: linear-gradient(145deg, #091322, #172554 60%, #1e1b4b); color: #ffffff; border: 1.5px solid rgba(255, 255, 255, 0.25); text-align: center; position: relative; overflow: hidden; padding: 22px 20px 18px; box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.1); border-radius: 18px; max-width: 360px;">
+      <svg style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.08; pointer-events:none;" viewBox="0 0 100 100">
+        <circle cx="82" cy="18" r="14" fill="#ffffff" filter="blur(1px)"/>
+        <path d="M10,82 Q35,48 55,82 T95,82" fill="none" stroke="#ffffff" stroke-width="1.2"/>
+      </svg>
+      <h3 style="font-size: 17px; font-weight: 900; color: #ffffff; margin-bottom: 14px; position: relative; z-index: 1; letter-spacing: -0.2px; font-family: 'Nanum Myeongjo', 'Batang', '바탕', serif; text-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);">
+        - 코트와 라켓과 공의 시 -
       </h3>
-      <div style="font-size: 13.5px; line-height: 1.7; font-weight: 500; color: #ffffff; letter-spacing: -0.3px;">
-        나 혼자만의 샷이 아니라<br>
-        등 뒤의 파트너와 함께 달리고<br>
-        우리 클럽의 이름을 가슴에 품고<br>
-        라켓을 쥐어 잡는다.
+      <div style="font-size: 14.5px; line-height: 1.75; font-weight: 500; position: relative; z-index: 1; font-family: 'Nanum Myeongjo', 'Batang', '바탕', serif; color: #ffffff; letter-spacing: -0.3px;">
+        치는 날까지<br>
+        코트를 우러러<br>
+        한 샷 부끄럼이 없도록<br>
+        라켓에 이는 바람에도<br>
+        나는 괴로워했다<br>
+        <span style="display:block; height: 10px;"></span>
+        공을 노래하는 마음으로<br>
+        모든 승과 양보를 인정해야지<br>
+        그리고 나한테 주어진<br>
+        공을 쳐내야겠다<br>
+        <span style="display:block; height: 10px;"></span>
+        오늘 밤에도 공이<br>
+        마음에 스치운다.
       </div>
-      <button onclick="closePoemModal()" style="margin-top: 16px; padding: 7px 20px; border-radius: 9999px; background: rgba(255,255,255,0.15); color: #ffffff; font-weight: 800; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.35); cursor: pointer;">닫기</button>
+      <button onclick="closePoemModal()" style="margin-top: 18px; padding: 8px 24px; border-radius: 9999px; background: rgba(255,255,255,0.15); color: #ffffff; font-weight: 800; font-size: 12.5px; border: 1px solid rgba(255, 255, 255, 0.35); cursor: pointer; position: relative; z-index: 1; transition: all 0.2s ease;">여운 간직하며 닫기</button>
     </div>
   </div>
 
@@ -2234,17 +2243,16 @@
       document.getElementById('photosModal').classList.remove('show');
     };
 
-    let confirmAction = null;
-    window.openConfirmModal = function(title, msg, onConfirm, okText = '확인', okColor = '') {
+        let confirmAction = null;
+    window.openConfirmModal = function(title, msg, onConfirm, okText = '진행하기', okBg = 'var(--primary)') {
       const tEl = document.getElementById('confirmTitle');
       const mEl = document.getElementById('confirmMsg');
-      const bEl = document.getElementById('confirmBtnOk') || document.querySelector('#confirmModal button:last-child');
+      const bEl = document.getElementById('confirmOkBtn');
       if (tEl) tEl.innerText = title;
       if (mEl) mEl.innerHTML = msg;
       if (bEl) {
         bEl.innerText = okText;
-        if (okColor) bEl.style.backgroundColor = okColor;
-        else bEl.style.backgroundColor = 'var(--primary)';
+        bEl.style.background = okBg;
       }
       confirmAction = onConfirm;
       const modal = document.getElementById('confirmModal');
@@ -2265,14 +2273,14 @@
       return photos.map((item, idx) => {
         if (typeof item === 'string') {
           return {
-            id: 'p_legacy_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+            id: 'p_tour_legacy_' + idx + '_' + Math.random().toString(36).substring(2, 7),
             url: item,
             date: '이전 등록 사진',
             timestamp: Date.now() + idx
           };
         }
         if (!item.id) {
-          item.id = 'p_' + (item.timestamp || Date.now()) + '_' + idx + '_' + Math.random().toString(36).substring(2, 7);
+          item.id = 'p_tour_' + (item.timestamp || Date.now()) + '_' + idx + '_' + Math.random().toString(36).substring(2, 7);
         }
         if (!item.date) item.date = '기타';
         return item;
@@ -2287,7 +2295,7 @@
       const photos = window.tourState.photos;
 
       if (photos.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0;">등록된 사진이나 문서가 없습니다.</div>`;
+        container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0;">등록된 사진이나 문서가 없습니다.</div>';
         return;
       }
 
@@ -2310,17 +2318,17 @@
         `;
 
         dateGroups[dateKey].forEach(photo => {
-          const photoUrl = photo.url || '';
-          const photoId = photo.id;
+          const photoUrl = photo.url || photo;
+          const photoId = photo.id || '';
           html += `
             <div style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #cbd5e1; background: #0f172a;">
               <img src="${photoUrl}" onclick="showPhotoLightbox('${photoUrl}')" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" />
-              <button type="button" onclick="event.stopPropagation(); deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.9); color: #ffffff; border: none; border-radius: 50%; width: 15px; height: 15px; font-size: 8.5px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4); padding: 0;" title="사진 삭제">✕</button>
+              <button type="button" onclick="event.stopPropagation(); deletePhoto('${photoId}')" style="position: absolute; top: 3px; right: 3px; background: rgba(225, 29, 72, 0.9); color: #ffffff; border: none; border-radius: 50%; width: 12px; height: 12px; font-size: 7px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.4); padding: 0;" title="사진 삭제">✕</button>
             </div>
           `;
         });
 
-        html += `</div>`;
+        html += '</div>';
       });
 
       container.innerHTML = html;
@@ -2362,7 +2370,7 @@
               const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}(${days[now.getDay()]})`;
 
               resolve({
-                id: 'p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+                id: 'p_tour_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 7),
                 url: compressedBase64,
                 date: dateStr,
                 timestamp: Date.now() + idx
@@ -2386,7 +2394,7 @@
       if (!window.tourState.photos) window.tourState.photos = [];
       window.tourState.photos = normalizePhotosList(window.tourState.photos);
       window.tourState.photos = [...newPhotos, ...window.tourState.photos];
-      if (window.tourState.photos.length > 30) window.tourState.photos = window.tourState.photos.slice(0, 30);
+      if (window.tourState.photos.length > 300) window.tourState.photos = window.tourState.photos.slice(0, 300);
 
       saveTournamentState(true);
       renderPhotosGrid();
